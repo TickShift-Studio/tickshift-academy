@@ -7,6 +7,7 @@ import StudentDashboard from './pages/student/Dashboard'
 import MyCourses from './pages/student/Courses'
 import CoursePlayer from './pages/student/CoursePlayer'
 import Homework from './pages/student/Homework'
+import Partners from './pages/student/Partners'
 import AdminDashboard from './pages/admin/Dashboard'
 import ManageCourses from './pages/admin/Courses'
 import ManageAssignments from './pages/admin/Assignments'
@@ -17,8 +18,19 @@ function ProtectedLayout({ children, adminOnly = false }) {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--navy)' }}>
-        <div className="spinner" />
+      <div style={{
+        minHeight: '100vh', display: 'flex',
+        alignItems: 'center', justifyContent: 'center',
+        background: '#08162E',
+      }}>
+        <div style={{
+          width: 38, height: 38,
+          border: '3px solid rgba(15,111,255,0.2)',
+          borderTopColor: '#0F6FFF',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+        }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
       </div>
     )
   }
@@ -50,6 +62,7 @@ function AppRoutes() {
       <Route path="/courses" element={<ProtectedLayout><MyCourses /></ProtectedLayout>} />
       <Route path="/courses/:courseId" element={<ProtectedLayout><CoursePlayer /></ProtectedLayout>} />
       <Route path="/homework" element={<ProtectedLayout><Homework /></ProtectedLayout>} />
+      <Route path="/partners" element={<ProtectedLayout><Partners /></ProtectedLayout>} />
 
       {/* Admin routes */}
       <Route path="/admin" element={<ProtectedLayout adminOnly><AdminDashboard /></ProtectedLayout>} />
