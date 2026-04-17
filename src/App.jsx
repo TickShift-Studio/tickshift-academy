@@ -39,7 +39,7 @@ function ProtectedLayout({ children, adminOnly = false }) {
   if (adminOnly && profile?.role !== 'admin') return <Navigate to="/dashboard" replace />
 
   return (
-    <div className="portal-layout">
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#060E1F' }}>
       <Sidebar />
       <div style={{ flex: 1, overflowY: 'auto' }}>{children}</div>
     </div>
@@ -49,12 +49,12 @@ function ProtectedLayout({ children, adminOnly = false }) {
 function AppRoutes() {
   const { user, profile, loading } = useAuth()
 
-  if (loading) return null
+  
 
   return (
     <Routes>
       <Route path="/login" element={
-        user ? <Navigate to={profile?.role === 'admin' ? '/admin' : '/dashboard'} replace /> : <Login />
+        !loading && user ? <Navigate to={profile?.role === 'admin' ? '/admin' : '/dashboard'} replace /> : <Login />
       } />
 
       {/* Student routes */}
