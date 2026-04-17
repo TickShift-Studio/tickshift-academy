@@ -168,7 +168,7 @@ export default function Login() {
   return (
     <div style={{ minHeight: '100vh', background: '#08162E', display: 'flex', position: 'relative', overflow: 'hidden', fontFamily: "'Open Sans', sans-serif" }}>
       <AnimatedCanvas />
-      <div style={{ flex: 1, position: 'relative', zIndex: 2, padding: '2.5rem 2rem 0 3rem', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, position: 'relative', zIndex: 2, padding: '2.5rem 2rem 0 3rem', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '3.5rem' }}>
           <Logo size={36} />
           <div>
@@ -206,8 +206,8 @@ export default function Login() {
           </div>
         </div>
       </div>
-      <div style={{ width: 380, flexShrink: 0, position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 2.5rem 2rem 1.5rem' }}>
-        <div style={{ width: '100%', background: 'rgba(8,18,46,0.88)', border: '1px solid rgba(60,203,255,0.18)', borderRadius: 20, padding: '2.25rem', backdropFilter: 'blur(24px)', boxShadow: '0 0 60px rgba(15,111,255,0.08), 0 24px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)' }}>
+      <div style={{ width: 420, flexShrink: 0, position: 'relative', zIndex: 10, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 2.5rem 2rem 1.5rem' }}>
+        <div style={{ width: '100%', background: '#0B1628', border: '1px solid rgba(60,203,255,0.25)', borderRadius: 20, padding: '2.25rem', boxShadow: '0 0 60px rgba(15,111,255,0.12), 0 24px 60px rgba(0,0,0,0.7)' }}>
           <div style={{ textAlign: 'center', marginBottom: '1.4rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, marginBottom: 4 }}>
               <Logo size={28} />
