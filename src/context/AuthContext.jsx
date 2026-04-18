@@ -1,127 +1,100 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 
-const AuthContext = createContext(null)
+const AuthContext = createContext({})
+export const useAuth = () => useContext(AuthContext)
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
-    const [profile, setProfile] = useState(null)
-      const [loading, setLoading] = useState(true)
-        const mountedRef = useRef(true)
+  const [user, setUser]           = useState(null)
+  const [profile, setProfile]     = useState(null)
+  const [membership, setMembership] = useState(null)
+  const [loading, setLoading]     = useState(true)
+  const mountedRef                = useRef(true)
 
-          async function fetchProfile(userId) {
-              try {
-                    const { data, error } = await supabase
-                            .from('profiles')
-                                    .select('*')
-                                            .eq('id', userId)
-                                                    .single()
-                                                          if (!error && data && mountedRef.current) {
-                                                                  setProfile(data)
-                                                                        } else if (mountedRef.current) {
-                                                                                setProfile(null)
-                                                                                      }
-                                                                                          } catch {
-                                                                                                if (mountedRef.current) setProfile(null)
-                                                                                                    }
-                                                                                                      }
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
-                                                                                                        useEffect(() => {
-                                                                                                            mountedRef.current = true
+  async function fetchProfile(userId) {
+    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
+    if (mountedRef.current) setProfile(data ?? null)
+    return data
+  }
 
-                                                                                                                const safetyTimer = setTimeout(() => {
-                                                                                                                      if (mountedRef.current) setLoading(false)
-                                                                                                                          }, 6000)
+  async function fetchMembership(userId) {
+    const { data } = await supabase.from('memberships').select('*')
+      .eq('user_id', userId).eq('status', 'active')
+      .order('created_at', { ascending: false }).limit(1).maybeSingle()
+    if (mountedRef.current) setMembership(data ?? null)
+  }
 
-                                                                                                                              supabase.auth.getSession()
-                                                                                                                                    .then(async ({ data: { session }, error }) => {
-                                                                                                                                            if (!mountedRef.current) return
-                                                                                                                                                    if (error) {
-                                                                                                                                                              console.error('getSession error:', error)
-                                                                                                                                                                        setLoading(false)
-                                                                                                                                                                                  return
-                                                                                                                                                                                          }
-                                                                                                                                                                                                  setUser(session?.user ?? null)
-                                                                                                                                                                                                          if (session?.user) {
-                                                                                                                                                                                                                    await fetchProfile(session.user.id)
-                                                                                                                                                                                                                            }
-                                                                                                                                                                                                                                    if (mountedRef.current) {
-                                                                                                                                                                                                                                              clearTimeout(safetyTimer)
-                                                                                                                                                                                                                                                        setLoading(false)
-                                                                                                                                                                                                                                                                }
-                                                                                                                                                                                                                                                                      })
-                                                                                                                                                                                                                                                                            .catch((err) => {
-                                                                                                                                                                                                                                                                                    console.error('getSession threw:', err)
-                                                                                                                                                                                                                                                                                            if (mountedRef.current) setLoading(false)
-                                                                                                                                                                                                                                                                                                  })
+  useEffect(() => {
+    let ignore = false
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (ignore) return
+      setUser(session?.user ?? null)
+      if (session?.user) {
+        await fetchProfile(session.user.id)
+        await fetchMembership(session.user.id)
+      }
+      if (mountedRef.current) setLoading(false)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (ignore) return
+      setUser(session?.user ?? null)
+      if (session?.user) {
+        await fetchProfile(session.user.id)
+        await fetchMembership(session.user.id)
+      } else {
+        setProfile(null)
+        setMembership(null)
+      }
+      if (mountedRef.current) setLoading(false)
+    })
+    return () => { ignore = true; subscription.unsubscribe() }
+  }, [])
 
-                                                                                                                                                                                                                                                                                                    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-                                                                                                                                                                                                                                                                                                          async (_event, session) => {
-                                                                                                                                                                                                                                                                                                                  if (!mountedRef.current) return
-                                                                                                                                                                                                                                                                                                                          const currentUser = session?.user ?? null
-                                                                                                                                                                                                                                                                                                                                  setUser(currentUser)
-                                                                                                                                                                                                                                                                                                                                          if (currentUser) {
-                                                                                                                                                                                                                                                                                                                                                    await fetchProfile(currentUser.id)
-                                                                                                                                                                                                                                                                                                                                                            } else {
-                                                                                                                                                                                                                                                                                                                                                                      setProfile(null)
-                                                                                                                                                                                                                                                                                                                                                                              }
-                                                                                                                                                                                                                                                                                                                                                                                      if (mountedRef.current) setLoading(false)
-                                                                                                                                                                                                                                                                                                                                                                                            }
-                                                                                                                                                                                                                                                                                                                                                                                                )
+  async function signIn(email, password) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    return { data, error }
+  }
 
-                                                                                                                                                                                                                                                                                                                                                                                                    return () => {
-                                                                                                                                                                                                                                                                                                                                                                                                          mountedRef.current = false
-                                                                                                                                                                                                                                                                                                                                                                                                                clearTimeout(safetyTimer)
-                                                                                                                                                                                                                                                                                                                                                                                                                      subscription.unsubscribe()
-                                                                                                                                                                                                                                                                                                                                                                                                                          }
-                                                                                                                                                                                                                                                                                                                                                                                                                            }, [])
+  async function signUp(email, password, fullName) {
+    const { data, error } = await supabase.auth.signUp({
+      email, password,
+      options: { data: { full_name: fullName } }
+    })
+    return { data, error }
+  }
 
-                                                                                                                                                                                                                                                                                                                                                                                                                              async function signIn(email, password) {
-                                                                                                                                                                                                                                                                                                                                                                                                                                  const { error } = await supabase.auth.signInWithPassword({ email, password })
-                                                                                                                                                                                                                                                                                                                                                                                                                                      return { error }
-                                                                                                                                                                                                                                                                                                                                                                                                                                        }
+  async function signOut() {
+    try { await supabase.auth.signOut() } catch {}
+    if (mountedRef.current) { setUser(null); setProfile(null); setMembership(null) }
+    window.location.replace('/login')
+  }
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                          async function signUp(email, password, fullName) {
-                                                                                                                                                                                                                                                                                                                                                                                                                                              const { data, error } = await supabase.auth.signUp({
-                                                                                                                                                                                                                                                                                                                                                                                                                                                    email,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                          password,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                options: { data: { full_name: fullName } },
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                    })
+  async function sendPasswordReset(email) {
+    return supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`
+    })
+  }
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                        if (!error && data?.user) {
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                              const { error: profileError } = await supabase
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      .from('profiles')
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              .upsert(
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        { id: data.user.id, email, full_name: fullName, role: 'student' },
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  { onConflict: 'id', ignoreDuplicates: false }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          )
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                if (profileError) {
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        console.warn('Manual profile upsert note:', profileError.message)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  }
+  async function updatePassword(newPassword) {
+    return supabase.auth.updateUser({ password: newPassword })
+  }
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      return { error }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        }
+  const isAdmin   = profile?.role === 'admin'
+  const hasAccess = isAdmin || membership?.status === 'active'
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          async function signOut() {
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              await supabase.auth.signOut()
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  if (mountedRef.current) {
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        setUser(null)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              setProfile(null)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    }
-
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      const isAdmin = profile?.role === 'admin'
-
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        return (
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <AuthContext.Provider value={{ user, profile, loading, isAdmin, signIn, signUp, signOut }}>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  {children}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      </AuthContext.Provider>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        )
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        }
-
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        export function useAuth() {
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          const ctx = useContext(AuthContext)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            if (!ctx) throw new Error('useAuth must be used inside AuthProvider')
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              return ctx
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              }
+  return (
+    <AuthContext.Provider value={{
+      user, profile, membership, loading,
+      isAdmin, hasAccess,
+      signIn, signUp, signOut,
+      sendPasswordReset, updatePassword,
+    }}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
