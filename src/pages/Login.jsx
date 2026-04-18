@@ -27,57 +27,32 @@ const tickers = [...TICKERS_BASE, ...TICKERS_BASE]
 
 function AnimatedCanvas() {
   const ref = useRef(null)
-
   useEffect(() => {
     const canvas = ref.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     let raf, W, H, pts = [], chart = []
-
     function init() {
       W = canvas.width = canvas.offsetWidth
       H = canvas.height = canvas.offsetHeight
-      pts = Array.from({ length: 60 }, () => ({
-        x: Math.random() * W, y: Math.random() * H,
-        vx: (Math.random() - .5) * .25, vy: (Math.random() - .5) * .25,
-        r: Math.random() * 1.4 + .4,
-      }))
+      pts = Array.from({ length: 60 }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .25, vy: (Math.random() - .5) * .25, r: Math.random() * 1.4 + .4 }))
       chart = []
       let v = H * .52
-      for (let i = 0; i <= W; i += 3) {
-        v += (Math.random() - .5) * 2.6
-        v = Math.max(H * .25, Math.min(H * .78, v))
-        chart.push({ x: i, y: v })
-      }
+      for (let i = 0; i <= W; i += 3) { v += (Math.random() - .5) * 2.6; v = Math.max(H * .25, Math.min(H * .78, v)); chart.push({ x: i, y: v }) }
     }
-
     function draw() {
       ctx.clearRect(0, 0, W, H)
-      ctx.strokeStyle = 'rgba(15,111,255,0.035)'
-      ctx.lineWidth = 1
-      for (let x = 0; x < W; x += 70) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke()
-      }
-      for (let y = 0; y < H; y += 70) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke()
-      }
-      chart.forEach((p, i) => {
-        if (i) {
-          chart[i].y += (Math.random() - .5) * .65
-          chart[i].y = Math.max(H * .2, Math.min(H * .8, chart[i].y))
-        }
-      })
+      ctx.strokeStyle = 'rgba(15,111,255,0.035)'; ctx.lineWidth = 1
+      for (let x = 0; x < W; x += 70) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke() }
+      for (let y = 0; y < H; y += 70) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke() }
+      chart.forEach((p, i) => { if (i) { chart[i].y += (Math.random() - .5) * .65; chart[i].y = Math.max(H * .2, Math.min(H * .8, chart[i].y)) } })
       if (chart.length > 1) {
-        ctx.beginPath()
-        ctx.moveTo(chart[0].x, chart[0].y)
+        ctx.beginPath(); ctx.moveTo(chart[0].x, chart[0].y)
         chart.forEach(p => ctx.lineTo(p.x, p.y))
-        ctx.strokeStyle = 'rgba(15,111,255,0.2)'
-        ctx.lineWidth = 1.5
-        ctx.stroke()
+        ctx.strokeStyle = 'rgba(15,111,255,0.2)'; ctx.lineWidth = 1.5; ctx.stroke()
         ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath()
         const g = ctx.createLinearGradient(0, H * .2, 0, H)
-        g.addColorStop(0, 'rgba(15,111,255,0.09)')
-        g.addColorStop(1, 'rgba(15,111,255,0)')
+        g.addColorStop(0, 'rgba(15,111,255,0.09)'); g.addColorStop(1, 'rgba(15,111,255,0)')
         ctx.fillStyle = g; ctx.fill()
       }
       pts.forEach(p => {
@@ -88,35 +63,21 @@ function AnimatedCanvas() {
         ctx.fillStyle = 'rgba(60,203,255,0.3)'; ctx.fill()
       })
       ctx.lineWidth = .4
-      for (let i = 0; i < pts.length; i++) {
-        for (let j = i + 1; j < pts.length; j++) {
-          const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y
-          const dist2 = dx * dx + dy * dy
-          if (dist2 < 11000) {
-            ctx.strokeStyle = `rgba(60,203,255,${0.06 * (1 - dist2 / 11000)})`
-            ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y)
-            ctx.lineTo(pts[j].x, pts[j].y); ctx.stroke()
-          }
-        }
+      for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+        const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y, dist2 = dx * dx + dy * dy
+        if (dist2 < 11000) { ctx.strokeStyle = `rgba(60,203,255,${0.06 * (1 - dist2 / 11000)})`; ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y); ctx.stroke() }
       }
       const rg = ctx.createRadialGradient(W * .8, H * .25, 0, W * .8, H * .25, 280)
-      rg.addColorStop(0, 'rgba(15,111,255,0.1)')
-      rg.addColorStop(1, 'rgba(0,0,0,0)')
-      ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H)
+      rg.addColorStop(0, 'rgba(15,111,255,0.1)'); rg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H)
       const lg = ctx.createRadialGradient(W * .15, H * .85, 0, W * .15, H * .85, 200)
-      lg.addColorStop(0, 'rgba(60,203,255,0.05)')
-      lg.addColorStop(1, 'rgba(0,0,0,0)')
-      ctx.fillStyle = lg; ctx.fillRect(0, 0, W, H)
+      lg.addColorStop(0, 'rgba(60,203,255,0.05)'); lg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = lg; ctx.fillRect(0, 0, W, H)
       raf = requestAnimationFrame(draw)
     }
     init(); draw()
-    const ro = new ResizeObserver(init)
-    ro.observe(canvas)
+    const ro = new ResizeObserver(init); ro.observe(canvas)
     return () => { cancelAnimationFrame(raf); ro.disconnect() }
   }, [])
-  return (
-    <canvas ref={ref} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 0 }} />
-  )
+  return <canvas ref={ref} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 0 }} />
 }
 
 function WinBadge({ text, delay }) {
@@ -127,6 +88,7 @@ function WinBadge({ text, delay }) {
     </div>
   )
 }
+
 export default function Login() {
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
@@ -159,14 +121,13 @@ export default function Login() {
     display: 'block', width: '100%', padding: '10px 12px',
     background: 'rgba(5,14,34,0.85)',
     border: `1px solid ${focusedField === field ? '#0F6FFF' : 'rgba(60,203,255,0.12)'}`,
-    borderRadius: 8, color: '#F8FFFF',
-    fontFamily: "'Open Sans', sans-serif", fontSize: 13,
+    borderRadius: 8, color: '#F8FFFF', fontFamily: "'Open Sans', sans-serif", fontSize: 13,
     outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s',
     boxShadow: focusedField === field ? '0 0 0 3px rgba(15,111,255,0.15)' : 'none',
   })
 
   return (
-    <div style={{ minHeight: '100vh', background: '#08162E', display: 'flex', position: 'relative', overflow: 'hidden', fontFamily: "'Open Sans', sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: '#08162E', position: 'relative', overflow: 'hidden', fontFamily: "'Open Sans', sans-serif", display: 'flex', flexDirection: 'row', width: '100%' }}>
       <AnimatedCanvas />
       <div style={{ flex: 1, position: 'relative', zIndex: 2, padding: '2.5rem 2rem 0 3rem', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '3.5rem' }}>
@@ -206,7 +167,8 @@ export default function Login() {
           </div>
         </div>
       </div>
-      <div style={{ width: 420, flexShrink: 0, position: 'relative', zIndex: 10, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 2.5rem 2rem 1.5rem' }}>
+
+      <div style={{ width: 420, flexShrink: 0, position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 2.5rem 2rem 1.5rem', minHeight: '100vh' }}>
         <div style={{ width: '100%', background: '#0B1628', border: '1px solid rgba(60,203,255,0.25)', borderRadius: 20, padding: '2.25rem', boxShadow: '0 0 60px rgba(15,111,255,0.12), 0 24px 60px rgba(0,0,0,0.7)' }}>
           <div style={{ textAlign: 'center', marginBottom: '1.4rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, marginBottom: 4 }}>
@@ -218,8 +180,7 @@ export default function Login() {
           <div style={{ height: 1, background: 'linear-gradient(90deg, transparent, #0F6FFF 30%, #3CCBFF 50%, #0F6FFF 70%, transparent)', opacity: .4, margin: '.75rem 0 1.5rem' }} />
           <div style={{ display: 'flex', gap: 6, marginBottom: '1.4rem' }}>
             {['login', 'signup'].map(m => (
-              <button key={m} onClick={() => { setMode(m); setError(''); setSuccess('') }}
-                style={{ flex: 1, padding: '9px', borderRadius: 8, border: mode === m ? '1px solid rgba(60,203,255,0.45)' : '1px solid rgba(60,203,255,0.1)', background: mode === m ? 'rgba(15,111,255,0.2)' : 'rgba(8,22,46,0.4)', color: mode === m ? '#3CCBFF' : '#6E7B8F', fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 10.5, letterSpacing: 1, cursor: 'pointer', transition: 'all .2s', boxShadow: mode === m ? '0 0 12px rgba(60,203,255,0.1)' : 'none' }}>
+              <button key={m} onClick={() => { setMode(m); setError(''); setSuccess('') }} style={{ flex: 1, padding: '9px', borderRadius: 8, border: mode === m ? '1px solid rgba(60,203,255,0.45)' : '1px solid rgba(60,203,255,0.1)', background: mode === m ? 'rgba(15,111,255,0.2)' : 'rgba(8,22,46,0.4)', color: mode === m ? '#3CCBFF' : '#6E7B8F', fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 10.5, letterSpacing: 1, cursor: 'pointer', transition: 'all .2s' }}>
                 {m === 'login' ? 'SIGN IN' : 'JOIN NOW'}
               </button>
             ))}
@@ -241,31 +202,29 @@ export default function Login() {
             </div>
             {error && <div style={{ background: 'rgba(231,76,60,0.08)', border: '1px solid rgba(231,76,60,0.28)', borderRadius: 8, padding: '10px 13px', fontSize: 12, color: '#E74C3C', marginBottom: 14 }}>{error}</div>}
             {success && <div style={{ background: 'rgba(46,204,113,0.07)', border: '1px solid rgba(46,204,113,0.28)', borderRadius: 8, padding: '10px 13px', fontSize: 12, color: '#2ECC71', marginBottom: 14 }}>{success}</div>}
-            <button type="submit" disabled={loading} style={{ display: 'block', width: '100%', padding: '13px', background: loading ? 'rgba(13,95,224,0.7)' : 'linear-gradient(135deg, #0F6FFF, #3CCBFF)', border: 'none', borderRadius: 9, color: '#fff', fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 12, letterSpacing: 2.5, cursor: loading ? 'not-allowed' : 'pointer', transition: 'opacity 0.2s', boxShadow: loading ? 'none' : '0 4px 20px rgba(15,111,255,0.35)' }}
-              onMouseEnter={e => { if (!loading) e.target.style.opacity = '.9' }}
-              onMouseLeave={e => { e.target.style.opacity = '1' }}
-            >{loading ? 'PLEASE WAIT...' : mode === 'login' ? 'ACCESS ACADEMY' : 'JOIN THE ACADEMY'}</button>
+            <button type="submit" disabled={loading} style={{ display: 'block', width: '100%', padding: '13px', background: loading ? 'rgba(13,95,224,0.7)' : 'linear-gradient(135deg, #0F6FFF, #3CCBFF)', border: 'none', borderRadius: 9, color: '#fff', fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 12, letterSpacing: 2.5, cursor: loading ? 'not-allowed' : 'pointer', boxShadow: loading ? 'none' : '0 4px 20px rgba(15,111,255,0.35)' }} onMouseEnter={e => { if (!loading) e.target.style.opacity = '.9' }} onMouseLeave={e => { e.target.style.opacity = '1' }}>
+              {loading ? 'PLEASE WAIT...' : mode === 'login' ? 'ACCESS ACADEMY' : 'JOIN THE ACADEMY'}
+            </button>
           </form>
           <p style={{ fontSize: 11, color: '#3a4a5e', textAlign: 'center', marginTop: '1rem' }}>
             {mode === 'login' ? 'New here? ' : 'Have an account? '}
-            <span onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setSuccess('') }} style={{ color: '#3CCBFF', cursor: 'pointer', fontWeight: 600 }}>{mode === 'login' ? 'Create your account' : 'Sign in'}</span>
+            <span onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setSuccess('') }} style={{ color: '#3CCBFF', cursor: 'pointer', fontWeight: 600 }}>
+              {mode === 'login' ? 'Create your account' : 'Sign in'}
+            </span>
           </p>
+          {mode === 'login' && (
+            <p style={{ fontSize: 11, color: '#3a4a5e', textAlign: 'center', marginTop: '0.5rem' }}>
+              <a href="/forgot-password" style={{ color: '#4A6FA5', textDecoration: 'none', fontWeight: 500 }} onMouseEnter={e => e.target.style.color = '#3CCBFF'} onMouseLeave={e => e.target.style.color = '#4A6FA5'}>Forgot your password?</a>
+            </p>
+          )}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: '1.4rem', paddingTop: '1.1rem', borderTop: '1px solid rgba(60,203,255,0.07)' }}>
             {[{ label: '▶', href: 'https://www.youtube.com/@AnixWallo', title: 'YouTube' }, { label: 'IG', href: 'https://instagram.com', title: 'Instagram' }, { label: 'DC', href: 'https://discord.com', title: 'Discord' }].map(s => (
-              <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" title={s.title}
-                style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid rgba(60,203,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: '#6E7B8F', fontSize: 12, transition: 'all .15s' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(60,203,255,0.4)'; e.currentTarget.style.color = '#3CCBFF'; e.currentTarget.style.background = 'rgba(60,203,255,0.06)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(60,203,255,0.12)'; e.currentTarget.style.color = '#6E7B8F'; e.currentTarget.style.background = 'transparent' }}
-              >{s.label}</a>
+              <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" title={s.title} style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid rgba(60,203,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', color: '#6E7B8F', fontSize: 12, transition: 'all .15s' }} onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(60,203,255,0.4)'; e.currentTarget.style.color = '#3CCBFF' }} onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(60,203,255,0.12)'; e.currentTarget.style.color = '#6E7B8F' }}>{s.label}</a>
             ))}
           </div>
         </div>
       </div>
-      <style>{`
-        @keyframes tickscroll { from { transform: translateX(0) } to { transform: translateX(-50%) } }
-        @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: translateY(0) } }
-        input::placeholder { color: #2a3a52 !important }
-      `}</style>
+      <style>{`@keyframes tickscroll { from { transform: translateX(0) } to { transform: translateX(-50%) } } @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: translateY(0) } } input::placeholder { color: #2a3a52 !important }`}</style>
     </div>
   )
 }
