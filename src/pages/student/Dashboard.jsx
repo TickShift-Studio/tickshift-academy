@@ -27,7 +27,6 @@ function StatSkeleton() {
 function CourseCard({ course, pct, onClick }) {
   const gradients = ['linear-gradient(135deg, #0F6FFF, #3CCBFF)', 'linear-gradient(135deg, #3CCBFF, #0D5FE0)', 'linear-gradient(135deg, #0D1F3C, #0F6FFF)', 'linear-gradient(135deg, #1a3a6e, #3CCBFF)']
   const idx = course.position % gradients.length || 0
-  const done = course.lessons?.filter(l => l._done).length || 0
   const total = course.lessons?.length || 0
   return (
     <div onClick={onClick} style={{ background: '#0D1F3C', border: '1px solid rgba(15,111,255,0.15)', borderRadius: 14, overflow: 'hidden', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(15,111,255,0.4)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(15,111,255,0.12)' }} onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(15,111,255,0.15)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}>
@@ -36,7 +35,7 @@ function CourseCard({ course, pct, onClick }) {
         <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 13, color: '#F8FFFF', marginBottom: 6 }}>{course.title}</div>
         {course.description && <p style={{ fontSize: 11.5, color: '#6E7B8F', lineHeight: 1.6, marginBottom: 14, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{course.description}</p>}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
-          <span style={{ fontSize: 10.5, color: '#6E7B8F' }}>{done} / {total} lessons</span>
+          <span style={{ fontSize: 10.5, color: '#6E7B8F' }}>0 / {total} lessons</span>
           <span style={{ fontSize: 11, fontWeight: 700, color: pct === 100 ? '#2ECC71' : '#3CCBFF' }}>{pct}%</span>
         </div>
         <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
@@ -62,16 +61,17 @@ export default function StudentDashboard() {
   const navigate = useNavigate()
   const userId = profile?.id || user?.id
 
-  const [courses, setCourses]       = useState([])
-  const [progress, setProgress]     = useState([])
+  const [courses, setCourses]           = useState([])
+  const [progress, setProgress]         = useState([])
   const [coursesReady, setCoursesReady] = useState(false)
-
   const [assignments, setAssignments]   = useState([])
   const [submissions, setSubmissions]   = useState([])
   const [statsReady, setStatsReady]     = useState(false)
 
+  // Load data as soon as userId is available — don't gate on hasAccess
+  // hasAccess may be false during the membership-fetch window right after login
   useEffect(() => {
-    if (!userId || !hasAccess) return
+    if (!userId) return
     let cancelled = false
 
     async function loadCourses() {
@@ -103,7 +103,7 @@ export default function StudentDashboard() {
     loadCourses()
     loadStats()
     return () => { cancelled = true }
-  }, [userId, hasAccess])
+  }, [userId]) // userId only — hasAccess removed intentionally
 
   function pct(course) {
     const total = course.lessons?.length || 0
@@ -116,6 +116,7 @@ export default function StudentDashboard() {
   const overallPct       = totalLessons ? Math.round((completedLessons / totalLessons) * 100) : 0
   const pendingHW        = assignments.filter(a => !submissions.includes(a.id)).length
 
+  // Only show locked screen after membership check completes
   if (!hasAccess && membershipChecked) return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#08162E', padding: '2rem', textAlign: 'center', gap: 16 }}>
       <div style={{ fontSize: 40 }}>🔒</div>
@@ -128,7 +129,7 @@ export default function StudentDashboard() {
   return (
     <div style={{ minHeight: '100vh', background: '#08162E', padding: '2rem 2.25rem', fontFamily: "'Open Sans', sans-serif" }}>
 
-      {/* Welcome header — renders immediately, no data needed */}
+      {/* Welcome header — renders immediately */}
       <div style={{ background: 'linear-gradient(135deg, rgba(13,31,60,0.8), rgba(8,18,46,0.9))', border: '1px solid rgba(15,111,255,0.14)', borderRadius: 16, padding: '1.5rem 1.75rem', marginBottom: '1.75rem', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', right: -40, top: -40, width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(15,111,255,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
         <div style={{ position: 'relative' }}>
