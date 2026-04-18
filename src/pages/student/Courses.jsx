@@ -28,10 +28,10 @@ export default function MyCourses() {
 
   const userId = profile?.id || user?.id
 
+  // Load data as soon as userId is available — don't gate on hasAccess
+  // hasAccess may be false during the membership-fetch window right after login
   useEffect(() => {
     if (!userId) return
-    if (!hasAccess) { setReady(true); return }
-
     let cancelled = false
 
     async function load() {
@@ -51,7 +51,7 @@ export default function MyCourses() {
     }
     load()
     return () => { cancelled = true }
-  }, [userId, hasAccess])
+  }, [userId]) // userId only — hasAccess removed intentionally
 
   function pct(course) {
     const total = course.lessons?.length || 0
@@ -59,6 +59,7 @@ export default function MyCourses() {
     return Math.round((course.lessons.filter(l => progress.includes(l.id)).length / total) * 100)
   }
 
+  // Only show locked screen after membership check completes
   if (!hasAccess && membershipChecked) return (
     <div style={noAccessStyle}>
       <div style={{ fontSize: 40 }}>🔒</div>
