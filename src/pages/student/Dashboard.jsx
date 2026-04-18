@@ -130,7 +130,7 @@ function CourseCard({ course, pct, onClick }) {
   )
 }
 export default function StudentDashboard() {
-  const { profile } = useAuth()
+  const { profile, user } = useAuth()
   const navigate = useNavigate()
   const [courses, setCourses] = useState([])
   const [assignments, setAssignments] = useState([])
@@ -140,11 +140,12 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     async function load() {
+      const userId = profile?.id || user?.id
       const [c, a, p, s] = await Promise.all([
         supabase.from('courses').select('*, lessons(id)').order('position'),
         supabase.from('assignments').select('*, courses(title, color)'),
-        supabase.from('lesson_progress').select('lesson_id').eq('user_id', profile.id),
-        supabase.from('submissions').select('assignment_id').eq('user_id', profile.id),
+        supabase.from('lesson_progress').select('lesson_id').eq('user_id', userId),
+        supabase.from('submissions').select('assignment_id').eq('user_id', userId),
       ])
       setCourses(c.data || [])
       setAssignments(a.data || [])
@@ -152,8 +153,8 @@ export default function StudentDashboard() {
       setSubmissions(s.data?.map(r => r.assignment_id) || [])
       setLoading(false)
     }
-    if (profile) load()
-  }, [profile])
+    if (profile?.id || user?.id) load()
+  }, [profile, user])
 
   const totalLessons = courses.reduce((a, c) => a + (c.lessons?.length || 0), 0)
   const completedLessons = progress.length
