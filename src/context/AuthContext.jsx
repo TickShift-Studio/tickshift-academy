@@ -4,18 +4,22 @@ import { supabase } from '../supabase'
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser]                   = useState(null)
-  const [profile, setProfile]             = useState(null)
-  const [membership, setMembership]       = useState(null)
-  const [loading, setLoading]             = useState(true)
+  const [user, setUser]             = useState(null)
+  const [profile, setProfile]       = useState(null)
+  const [membership, setMembership] = useState(null)
+  const [loading, setLoading]       = useState(true)
   const [membershipChecked, setMembershipChecked] = useState(false)
-  const mountedRef = useRef(true)
+  const mountedRef    = useRef(true)
+  const fetchedForRef = useRef(null) // tracks which userId we last fetched for
 
   async function fetchProfile(userId) {
     try {
-      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
+      const { data } = await supabase
+        .from('profiles').select('*').eq('id', userId).single()
       if (mountedRef.current) setProfile(data ?? null)
-    } catch { if (mountedRef.current) setProfile(null) }
+    } catch {
+      if (mountedRef.current) setProfile(null)
+    }
   }
 
   async function fetchMembership(userId) {
@@ -32,25 +36,34 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // Only fetch profile+membership once per unique userId
+  function loadUserData(userId) {
+    if (fetchedForRef.current === userId) return // already loading/loaded for this user
+    fetchedForRef.current = userId
+    setMembershipChecked(false)
+    fetchProfile(userId)
+    fetchMembership(userId)
+  }
+
   useEffect(() => {
     mountedRef.current = true
 
+    // Safety valve — never block longer than 5s
     const safetyTimer = setTimeout(() => {
       if (mountedRef.current) { setLoading(false); setMembershipChecked(true) }
     }, 5000)
 
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (!mountedRef.current) return
+      clearTimeout(safetyTimer)
       if (error) { setLoading(false); setMembershipChecked(true); return }
 
       const u = session?.user ?? null
       setUser(u)
-      setLoading(false)
-      clearTimeout(safetyTimer)
+      setLoading(false) // unblock routing immediately
 
       if (u) {
-        fetchProfile(u.id)
-        fetchMembership(u.id)
+        loadUserData(u.id)
       } else {
         setMembershipChecked(true)
       }
@@ -63,11 +76,10 @@ export function AuthProvider({ children }) {
       const u = session?.user ?? null
       setUser(u)
       if (!u) {
+        fetchedForRef.current = null
         setProfile(null); setMembership(null); setMembershipChecked(true)
       } else {
-        setMembershipChecked(false)
-        fetchProfile(u.id)
-        fetchMembership(u.id)
+        loadUserData(u.id) // no-op if already fetched for this userId
       }
     })
 
@@ -97,6 +109,7 @@ export function AuthProvider({ children }) {
   }
 
   async function signOut() {
+    fetchedForRef.current = null
     try { await supabase.auth.signOut() } catch {}
     if (mountedRef.current) { setUser(null); setProfile(null); setMembership(null) }
     window.location.replace('/login')
