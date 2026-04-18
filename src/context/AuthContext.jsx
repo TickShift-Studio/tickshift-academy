@@ -35,8 +35,7 @@ export function AuthProvider({ children }) {
       if (ignore) return
       setUser(session?.user ?? null)
       if (session?.user) {
-        await fetchProfile(session.user.id)
-        await fetchMembership(session.user.id)
+       await Promise.all([fetchProfile(session.user.id), fetchMembership(session.user.id)])
       }
       if (mountedRef.current) setLoading(false)
     })
