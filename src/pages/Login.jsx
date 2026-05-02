@@ -142,17 +142,22 @@ export default function Login() {
   async function handleSubmit(e) {
     e.preventDefault()
     setError(''); setSuccess(''); setLoading(true)
-    if (mode === 'login') {
-      const { error } = await signIn(email, password)
-      if (error) setError(error.message)
-      else navigate('/dashboard')
-    } else {
-      if (!fullName.trim()) { setError('Please enter your full name'); setLoading(false); return }
-      const { error } = await signUp(email, password, fullName)
-      if (error) setError(error.message)
-      else setSuccess('Account created! You can now sign in.')
+    try {
+      if (mode === 'login') {
+        const { error } = await signIn(email, password)
+        if (error) setError(error.message)
+        else navigate('/dashboard')
+      } else {
+        if (!fullName.trim()) { setError('Please enter your full name'); return }
+        const { error } = await signUp(email, password, fullName)
+        if (error) setError(error.message)
+        else setSuccess('Account created! You can now sign in.')
+      }
+    } catch (err) {
+      setError(err.message || 'Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const inputStyle = (field) => ({
@@ -279,7 +284,7 @@ export default function Login() {
         </div>
       </div>
 
-      {/* RIGHT SIDE */}
+      {/* RIGHT SIDE — Login Card */}
       <div style={{
         width: 420, flexShrink: 0, position: 'relative', zIndex: 10,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
