@@ -35,7 +35,7 @@ function AnimatedCanvas() {
     let raf, W, H, pts = [], chart = [], frame = 0
 
     function init() {
-      W = canvas.width  = canvas.offsetWidth
+      W = canvas.width = canvas.offsetWidth
       H = canvas.height = canvas.offsetHeight
       pts = Array.from({ length: 20 }, () => ({
         x: Math.random() * W, y: Math.random() * H,
