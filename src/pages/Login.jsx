@@ -27,15 +27,12 @@ const tickers = [...TICKERS_BASE, ...TICKERS_BASE]
 
 function AnimatedCanvas() {
   const ref = useRef(null)
-
   useEffect(() => {
     const canvas = ref.current
     if (!canvas) return
     if (window.innerWidth < 768) return
     const ctx = canvas.getContext('2d')
-    let raf, W, H
-    let pts = []
-    let chart = [], frame = 0
+    let raf, W, H, pts = [], chart = [], frame = 0
 
     function init() {
       W = canvas.width  = canvas.offsetWidth
@@ -57,13 +54,11 @@ function AnimatedCanvas() {
     function draw() {
       frame++
       ctx.clearRect(0, 0, W, H)
-
       ctx.strokeStyle = 'rgba(15,111,255,0.03)'
       ctx.lineWidth = 1
       for (let y = 0; y < H; y += 80) {
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke()
       }
-
       if (frame % 2 === 0) {
         chart.forEach((p, i) => {
           if (i) {
@@ -80,10 +75,10 @@ function AnimatedCanvas() {
         ctx.lineWidth = 1.5; ctx.stroke()
         ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath()
         const g = ctx.createLinearGradient(0, H * .2, 0, H)
-        g.addColorStop(0, 'rgba(15,111,255,0.07)'); g.addColorStop(1, 'rgba(15,111,255,0)')
+        g.addColorStop(0, 'rgba(15,111,255,0.07)')
+        g.addColorStop(1, 'rgba(15,111,255,0)')
         ctx.fillStyle = g; ctx.fill()
       }
-
       pts.forEach(p => {
         p.x += p.vx; p.y += p.vy
         if (p.x < 0 || p.x > W) p.vx *= -1
@@ -91,7 +86,6 @@ function AnimatedCanvas() {
         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.28)
         ctx.fillStyle = 'rgba(60,203,255,0.25)'; ctx.fill()
       })
-
       raf = requestAnimationFrame(draw)
     }
 
@@ -175,8 +169,7 @@ export default function Login() {
       minHeight: '100vh', background: '#08162E',
       position: 'relative', overflow: 'hidden',
       fontFamily: "'Open Sans', sans-serif",
-      display: 'flex', flexDirection: 'row',
-      width: '100%',
+      display: 'flex', flexDirection: 'row', width: '100%',
     }}>
       <AnimatedCanvas />
 
@@ -184,8 +177,7 @@ export default function Login() {
       <div style={{
         flex: 1, position: 'relative', zIndex: 2,
         padding: '2.5rem 2rem 0 3rem',
-        display: 'flex', flexDirection: 'column',
-        minWidth: 0,
+        display: 'flex', flexDirection: 'column', minWidth: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '3.5rem' }}>
           <Logo size={36} />
@@ -195,8 +187,7 @@ export default function Login() {
               fontSize: 15, letterSpacing: 3.5, color: '#F8FFFF',
             }}>TICKSHIFT</div>
             <div style={{
-              fontSize: 8, letterSpacing: 3.5, color: '#3CCBFF',
-              fontWeight: 700, marginTop: 2,
+              fontSize: 8, letterSpacing: 3.5, color: '#3CCBFF', fontWeight: 700, marginTop: 2,
             }}>ACADEMY</div>
           </div>
         </div>
@@ -204,37 +195,28 @@ export default function Login() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1.1rem' }}>
             <div style={{ width: 32, height: 1, background: 'linear-gradient(90deg, transparent, #3CCBFF)', opacity: .7 }} />
-            <span style={{
-              fontSize: 9, fontWeight: 700, letterSpacing: 3.5,
-              color: '#3CCBFF', textTransform: 'uppercase',
-            }}>Elite Trading Mentorship</span>
+            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 3.5, color: '#3CCBFF', textTransform: 'uppercase' }}>
+              Elite Trading Mentorship
+            </span>
           </div>
 
           <div style={{
             fontFamily: "'Montserrat', sans-serif", fontWeight: 900,
             fontSize: 'clamp(26px, 3.8vw, 48px)', lineHeight: 1.05,
-            color: '#F8FFFF', textTransform: 'uppercase',
-            letterSpacing: -1, marginBottom: '0.35rem',
-          }}>
-            Shift Your Mind.
-          </div>
+            color: '#F8FFFF', textTransform: 'uppercase', letterSpacing: -1, marginBottom: '0.35rem',
+          }}>Shift Your Mind.</div>
+
           <div style={{
             fontFamily: "'Montserrat', sans-serif", fontWeight: 900,
             fontSize: 'clamp(26px, 3.8vw, 48px)', lineHeight: 1.05,
             background: 'linear-gradient(90deg, #3CCBFF, #0F6FFF)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             textTransform: 'uppercase', letterSpacing: -1, marginBottom: '1.4rem',
-          }}>
-            Shift Your Money.
-          </div>
+          }}>Shift Your Money.</div>
 
-          <p style={{
-            fontSize: 13, color: '#6E7B8F', lineHeight: 1.8,
-            maxWidth: 420, marginBottom: '1.75rem',
-          }}>
+          <p style={{ fontSize: 13, color: '#6E7B8F', lineHeight: 1.8, maxWidth: 420, marginBottom: '1.75rem' }}>
             The only trading mentorship built without the lies. Real systems, real funded
-            traders — built by someone who did it first, because integrity still matters
-            in this industry.
+            traders — built by someone who did it first, because integrity still matters in this industry.
           </p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9, marginBottom: '2rem' }}>
@@ -249,17 +231,15 @@ export default function Login() {
               fontFamily: "'Montserrat', sans-serif", fontWeight: 900,
               fontSize: 14, color: '#fff',
               border: '2px solid rgba(60,203,255,0.35)',
-              boxShadow: '0 0 20px rgba(15,111,255,0.3)',
-              flexShrink: 0,
+              boxShadow: '0 0 20px rgba(15,111,255,0.3)', flexShrink: 0,
             }}>AE</div>
             <div>
-              <div style={{
-                fontFamily: "'Montserrat', sans-serif", fontWeight: 700,
-                fontSize: 13, color: '#F8FFFF',
-              }}>Andre Evans Jr (AnixWallo)</div>
-              <div style={{
-                fontSize: 9, color: '#6E7B8F', letterSpacing: 1.5, marginTop: 3,
-              }}>FUNDED TRADER · LEAD MENTOR</div>
+              <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 13, color: '#F8FFFF' }}>
+                Andre Evans Jr (AnixWallo)
+              </div>
+              <div style={{ fontSize: 9, color: '#6E7B8F', letterSpacing: 1.5, marginTop: 3 }}>
+                FUNDED TRADER · LEAD MENTOR
+              </div>
             </div>
           </div>
         </div>
@@ -271,29 +251,27 @@ export default function Login() {
         }}>
           <div style={{
             display: 'flex', gap: '2.5rem', whiteSpace: 'nowrap',
-            animation: 'tickscroll 28s linear infinite',
-            width: 'max-content',
+            animation: 'tickscroll 28s linear infinite', width: 'max-content',
           }}>
             {tickers.map((t, i) => (
               <span key={i} style={{ fontSize: 10.5, color: '#6E7B8F', letterSpacing: .4 }}>
                 <span style={{ color: '#C9D1DC', fontWeight: 600 }}>{t.sym}</span>
-                {' '}<span style={{ color: t.up ? '#2ECC71' : '#E74C3C', fontWeight: 700 }}>{t.val}</span>
+                {' '}
+                <span style={{ color: t.up ? '#2ECC71' : '#E74C3C', fontWeight: 700 }}>{t.val}</span>
               </span>
             ))}
           </div>
         </div>
       </div>
 
-      {/* RIGHT SIDE — Login Card */}
+      {/* RIGHT SIDE */}
       <div style={{
         width: 420, flexShrink: 0, position: 'relative', zIndex: 10,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '2rem 2.5rem 2rem 1.5rem',
-        minHeight: '100vh',
+        padding: '2rem 2.5rem 2rem 1.5rem', minHeight: '100vh',
       }}>
         <div style={{
-          width: '100%',
-          background: '#0B1628',
+          width: '100%', background: '#0B1628',
           border: '1px solid rgba(60,203,255,0.25)',
           borderRadius: 20, padding: '2.25rem',
           boxShadow: '0 0 60px rgba(15,111,255,0.12), 0 24px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05)',
@@ -301,10 +279,9 @@ export default function Login() {
           <div style={{ textAlign: 'center', marginBottom: '1.4rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, marginBottom: 4 }}>
               <Logo size={28} />
-              <div style={{
-                fontFamily: "'Montserrat', sans-serif", fontWeight: 900,
-                fontSize: 18, letterSpacing: 2.5, color: '#F8FFFF',
-              }}>TICKSHIFT</div>
+              <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 18, letterSpacing: 2.5, color: '#F8FFFF' }}>
+                TICKSHIFT
+              </div>
             </div>
             <div style={{ fontSize: 8, letterSpacing: 3, color: '#3CCBFF', fontWeight: 700 }}>ACADEMY</div>
           </div>
@@ -321,14 +298,12 @@ export default function Login() {
                 key={m}
                 onClick={() => { setMode(m); setError(''); setSuccess('') }}
                 style={{
-                  flex: 1, padding: '9px',
-                  borderRadius: 8,
+                  flex: 1, padding: '9px', borderRadius: 8,
                   border: mode === m ? '1px solid rgba(60,203,255,0.45)' : '1px solid rgba(60,203,255,0.1)',
                   background: mode === m ? 'rgba(15,111,255,0.2)' : 'rgba(8,22,46,0.4)',
                   color: mode === m ? '#3CCBFF' : '#6E7B8F',
                   fontFamily: "'Montserrat', sans-serif", fontWeight: 700,
-                  fontSize: 10.5, letterSpacing: 1, cursor: 'pointer',
-                  transition: 'all .2s',
+                  fontSize: 10.5, letterSpacing: 1, cursor: 'pointer', transition: 'all .2s',
                   boxShadow: mode === m ? '0 0 12px rgba(60,203,255,0.1)' : 'none',
                 }}
               >
@@ -342,8 +317,7 @@ export default function Login() {
               <div style={{ marginBottom: 13 }}>
                 <label style={{
                   fontSize: 9.5, fontWeight: 700, letterSpacing: 1,
-                  color: '#6E7B8F', textTransform: 'uppercase',
-                  display: 'block', marginBottom: 5,
+                  color: '#6E7B8F', textTransform: 'uppercase', display: 'block', marginBottom: 5,
                 }}>Full Name</label>
                 <input
                   style={inputStyle('name')}
@@ -361,8 +335,7 @@ export default function Login() {
             <div style={{ marginBottom: 13 }}>
               <label style={{
                 fontSize: 9.5, fontWeight: 700, letterSpacing: 1,
-                color: '#6E7B8F', textTransform: 'uppercase',
-                display: 'block', marginBottom: 5,
+                color: '#6E7B8F', textTransform: 'uppercase', display: 'block', marginBottom: 5,
               }}>Email Address</label>
               <input
                 style={inputStyle('email')}
@@ -379,8 +352,7 @@ export default function Login() {
             <div style={{ marginBottom: 18 }}>
               <label style={{
                 fontSize: 9.5, fontWeight: 700, letterSpacing: 1,
-                color: '#6E7B8F', textTransform: 'uppercase',
-                display: 'block', marginBottom: 5,
+                color: '#6E7B8F', textTransform: 'uppercase', display: 'block', marginBottom: 5,
               }}>Password</label>
               <input
                 style={inputStyle('password')}
@@ -413,14 +385,12 @@ export default function Login() {
               disabled={loading}
               style={{
                 display: 'block', width: '100%', padding: '13px',
-                background: loading
-                  ? 'rgba(13,95,224,0.7)'
-                  : 'linear-gradient(135deg, #0F6FFF, #3CCBFF)',
+                background: loading ? 'rgba(13,95,224,0.7)' : 'linear-gradient(135deg, #0F6FFF, #3CCBFF)',
                 border: 'none', borderRadius: 9, color: '#fff',
                 fontFamily: "'Montserrat', sans-serif", fontWeight: 900,
                 fontSize: 12, letterSpacing: 2.5,
                 cursor: loading ? 'not-allowed' : 'pointer',
-                transition: 'opacity 0.2s, transform 0.1s',
+                transition: 'opacity 0.2s',
                 boxShadow: loading ? 'none' : '0 4px 20px rgba(15,111,255,0.35)',
               }}
               onMouseEnter={e => { if (!loading) e.target.style.opacity = '.9' }}
@@ -445,8 +415,8 @@ export default function Login() {
               
                 href="/forgot-password"
                 style={{ color: '#4A6FA5', textDecoration: 'none', fontWeight: 500 }}
-                onMouseEnter={e => { e.target.style.color = '#3CCBFF' }}
-onMouseLeave={e => { e.target.style.color = '#4A6FA5' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#3CCBFF' }}
+                onMouseLeave={e => { e.currentTarget.style.color = '#4A6FA5' }}
               >Forgot your password?</a>
             </p>
           )}
@@ -471,8 +441,7 @@ onMouseLeave={e => { e.target.style.color = '#4A6FA5' }}
                   width: 34, height: 34, borderRadius: 8,
                   border: '1px solid rgba(60,203,255,0.12)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  textDecoration: 'none', color: '#6E7B8F', fontSize: 12,
-                  transition: 'all .15s',
+                  textDecoration: 'none', color: '#6E7B8F', fontSize: 12, transition: 'all .15s',
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.borderColor = 'rgba(60,203,255,0.4)'
