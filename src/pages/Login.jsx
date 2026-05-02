@@ -445,8 +445,8 @@ export default function Login() {
               
                 href="/forgot-password"
                 style={{ color: '#4A6FA5', textDecoration: 'none', fontWeight: 500 }}
-                onMouseEnter={e => e.target.style.color = '#3CCBFF'}
-                onMouseLeave={e => e.target.style.color = '#4A6FA5'}
+                onMouseEnter={e => { e.target.style.color = '#3CCBFF' }}
+onMouseLeave={e => { e.target.style.color = '#4A6FA5' }}
               >Forgot your password?</a>
             </p>
           )}
