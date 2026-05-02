@@ -10,16 +10,13 @@ export function AuthProvider({ children }) {
   const [loading, setLoading]       = useState(true)
   const [membershipChecked, setMembershipChecked] = useState(false)
   const mountedRef    = useRef(true)
-  const fetchedForRef = useRef(null) // tracks which userId we last fetched for
+  const fetchedForRef = useRef(null)
 
   async function fetchProfile(userId) {
     try {
-      const { data } = await supabase
-        .from('profiles').select('*').eq('id', userId).single()
+      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
       if (mountedRef.current) setProfile(data ?? null)
-    } catch {
-      if (mountedRef.current) setProfile(null)
-    }
+    } catch { if (mountedRef.current) setProfile(null) }
   }
 
   async function fetchMembership(userId) {
@@ -36,9 +33,8 @@ export function AuthProvider({ children }) {
     }
   }
 
-  // Only fetch profile+membership once per unique userId
   function loadUserData(userId) {
-    if (fetchedForRef.current === userId) return // already loading/loaded for this user
+    if (fetchedForRef.current === userId) return
     fetchedForRef.current = userId
     setMembershipChecked(false)
     fetchProfile(userId)
@@ -48,25 +44,21 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     mountedRef.current = true
 
-    // Safety valve — never block longer than 5s
     const safetyTimer = setTimeout(() => {
       if (mountedRef.current) { setLoading(false); setMembershipChecked(true) }
     }, 5000)
 
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (!mountedRef.current) return
-      clearTimeout(safetyTimer)
       if (error) { setLoading(false); setMembershipChecked(true); return }
 
       const u = session?.user ?? null
       setUser(u)
-      setLoading(false) // unblock routing immediately
+      setLoading(false)
+      clearTimeout(safetyTimer)
 
-      if (u) {
-        loadUserData(u.id)
-      } else {
-        setMembershipChecked(true)
-      }
+      if (u) loadUserData(u.id)
+      else setMembershipChecked(true)
     }).catch(() => {
       if (mountedRef.current) { setLoading(false); setMembershipChecked(true) }
     })
@@ -79,7 +71,7 @@ export function AuthProvider({ children }) {
         fetchedForRef.current = null
         setProfile(null); setMembership(null); setMembershipChecked(true)
       } else {
-        loadUserData(u.id) // no-op if already fetched for this userId
+        loadUserData(u.id)
       }
     })
 
@@ -91,8 +83,20 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function signIn(email, password) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error }
+    try {
+      const { error } = await Promise.race([
+        supabase.auth.signInWithPassword({ email, password }),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error('Connection timed out — please check your internet and try again.')),
+            12000
+          )
+        ),
+      ])
+      return { error: error ?? null }
+    } catch (err) {
+      return { error: { message: err.message || 'Sign in failed. Please try again.' } }
+    }
   }
 
   async function signUp(email, password, fullName) {
