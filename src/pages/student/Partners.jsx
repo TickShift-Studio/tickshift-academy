@@ -5,34 +5,54 @@ const partners = [
     id: 'lucid',
     name: 'Lucid Trading',
     tagline: 'Prop Firm Evaluation Platform',
-    description: 'Take your trading to the next level with Lucid Trading. Get funded and start earning with one of the most trader-friendly prop firms in the game. Trusted by TickShift students.',
+    description: 'Take your trading to the next level with Lucid Trading. Get funded and start earning with one of the most trader-friendly prop firms in the game. Currently offering 40% off your next 4 accounts — exclusively for TickShift students.',
     discount: '40% OFF',
-    code: 'ARTHUR',
-    href: 'https://lucidtrading.com/ref/ARTHUR',
+    discountDetail: 'Next 4 Accounts',
+    code: 'TickShift',
+    href: 'https://lucidtrading.com/ref/TICKSHIFT',
     icon: '💡',
     highlight: '#3CCBFF',
     highlightBg: 'rgba(60,203,255,0.07)',
     highlightBorder: 'rgba(60,203,255,0.2)',
     stats: [
       { label: 'Discount', value: '40%' },
-      { label: 'Student Payout', value: '$1,500' },
+      { label: 'Accounts', value: '4x' },
     ],
   },
   {
-    id: 'topone',
-    name: 'Top One Futures',
+    id: 'alphafutures',
+    name: 'Alpha Futures',
     tagline: 'Elite Futures Prop Firm',
-    description: 'One of the top-rated futures prop firms available. Scalable funding from $50K up. TickShift students have used this platform to get funded — get your discount today.',
-    discount: '40% OFF',
-    code: 'AnixWallo',
-    href: 'https://toponefutures.com/?linkId=lp_707970&sourceId=andre-evans&tenantId=toponefutures',
-    icon: '🚀',
+    description: 'Get funded with Alpha Futures — one of the most trader-friendly futures prop firms out there. 25% off new Premium Accounts for TickShift students. Accounts from $25K–$150K with up to 90% profit splits.',
+    discount: '25% OFF',
+    discountDetail: 'New Premium Accounts',
+    code: 'Justin012755',
+    href: 'https://alpha-futures.com/',
+    icon: '📈',
     highlight: '#0F6FFF',
     highlightBg: 'rgba(15,111,255,0.07)',
     highlightBorder: 'rgba(15,111,255,0.25)',
     stats: [
-      { label: 'Discount', value: '40%' },
-      { label: 'Student Funded', value: '$50K' },
+      { label: 'Discount', value: '25%' },
+      { label: 'Max Payout', value: '90%' },
+    ],
+  },
+  {
+    id: 'fundednext',
+    name: 'Funded Next',
+    tagline: 'Global Prop Trading Firm',
+    description: 'Funded Next gives traders access to simulated capital up to $300K with competitive profit splits. TickShift students get 10% off Rapid Accounts 1 Day Pass — one of the fastest ways to get funded.',
+    discount: '10% OFF',
+    discountDetail: 'Rapid Accounts 1 Day Pass',
+    code: 'REFICOFAR',
+    href: 'https://fundednext.com/',
+    icon: '🚀',
+    highlight: '#2ECC71',
+    highlightBg: 'rgba(46,204,113,0.07)',
+    highlightBorder: 'rgba(46,204,113,0.2)',
+    stats: [
+      { label: 'Discount', value: '10%' },
+      { label: 'Max Funding', value: '$300K' },
     ],
   },
 ]
@@ -65,6 +85,7 @@ function CopyButton({ text }) {
     </button>
   )
 }
+
 function PartnerCard({ partner }) {
   return (
     <div style={{
@@ -73,7 +94,6 @@ function PartnerCard({ partner }) {
       borderRadius: 18, overflow: 'hidden',
       display: 'flex', flexDirection: 'column',
     }}>
-      {/* Header */}
       <div style={{
         background: partner.highlightBg,
         borderBottom: `1px solid ${partner.highlightBorder}`,
@@ -93,13 +113,9 @@ function PartnerCard({ partner }) {
                 fontFamily: "'Montserrat', sans-serif", fontWeight: 900,
                 fontSize: 18, color: '#F8FFFF', marginBottom: 4,
               }}>{partner.name}</div>
-              <div style={{
-                fontSize: 11, color: '#6E7B8F', letterSpacing: 0.5,
-              }}>{partner.tagline}</div>
+              <div style={{ fontSize: 11, color: '#6E7B8F', letterSpacing: 0.5 }}>{partner.tagline}</div>
             </div>
           </div>
-
-          {/* Discount badge */}
           <div style={{
             background: 'linear-gradient(135deg, #0F6FFF, #3CCBFF)',
             borderRadius: 10, padding: '6px 14px',
@@ -114,13 +130,22 @@ function PartnerCard({ partner }) {
         </div>
       </div>
 
-      {/* Body */}
       <div style={{ padding: '1.5rem 1.75rem', flex: 1 }}>
-        <p style={{
-          fontSize: 13, color: '#C9D1DC', lineHeight: 1.75, marginBottom: '1.5rem',
-        }}>{partner.description}</p>
+        <div style={{
+          display: 'inline-block', marginBottom: '1rem',
+          background: partner.highlightBg,
+          border: `1px solid ${partner.highlightBorder}`,
+          borderRadius: 20, padding: '4px 12px',
+          fontSize: 11, fontWeight: 700, color: partner.highlight,
+          letterSpacing: 0.3,
+        }}>
+          {partner.discountDetail}
+        </div>
 
-        {/* Stats */}
+        <p style={{ fontSize: 13, color: '#C9D1DC', lineHeight: 1.75, marginBottom: '1.5rem' }}>
+          {partner.description}
+        </p>
+
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
           {partner.stats.map(s => (
             <div key={s.label} style={{
@@ -140,7 +165,6 @@ function PartnerCard({ partner }) {
           ))}
         </div>
 
-        {/* Discount code box */}
         <div style={{
           background: 'rgba(8,18,46,0.8)',
           border: `1px solid ${partner.highlightBorder}`,
@@ -160,8 +184,7 @@ function PartnerCard({ partner }) {
           </div>
         </div>
 
-        {/* CTA */}
-        <a
+        
           href={partner.href}
           target="_blank"
           rel="noopener noreferrer"
@@ -175,8 +198,8 @@ function PartnerCard({ partner }) {
             boxShadow: '0 4px 20px rgba(15,111,255,0.3)',
             transition: 'opacity 0.15s',
           }}
-          onMouseEnter={e => e.currentTarget.style.opacity = '.85'}
-          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+          onMouseEnter={e => { e.currentTarget.style.opacity = '.85' }}
+          onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
         >
           GET {partner.discount} — VISIT SITE →
         </a>
@@ -184,6 +207,7 @@ function PartnerCard({ partner }) {
     </div>
   )
 }
+
 export default function Partners() {
   return (
     <div style={{
@@ -191,7 +215,6 @@ export default function Partners() {
       padding: '2rem 2.25rem',
       fontFamily: "'Open Sans', sans-serif",
     }}>
-      {/* Header */}
       <div style={{ marginBottom: '1.75rem' }}>
         <div style={{
           fontFamily: "'Montserrat', sans-serif", fontWeight: 900,
@@ -202,7 +225,6 @@ export default function Partners() {
         </p>
       </div>
 
-      {/* Banner */}
       <div style={{
         background: 'linear-gradient(135deg, rgba(15,111,255,0.12), rgba(60,203,255,0.06))',
         border: '1px solid rgba(60,203,255,0.2)',
@@ -217,12 +239,11 @@ export default function Partners() {
             fontSize: 13, color: '#F8FFFF', marginBottom: 3,
           }}>TickShift Student Exclusive Deals</div>
           <div style={{ fontSize: 12, color: '#6E7B8F' }}>
-            These affiliate links support the community and give you discounts. Use code at checkout.
+            These affiliate links support the community and give you discounts. Use the code at checkout.
           </div>
         </div>
       </div>
 
-      {/* Partner cards */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))',
@@ -231,7 +252,6 @@ export default function Partners() {
         {partners.map(p => <PartnerCard key={p.id} partner={p} />)}
       </div>
 
-      {/* Bottom note */}
       <div style={{
         marginTop: '2rem', padding: '1rem 1.25rem',
         background: 'rgba(13,31,60,0.5)',
@@ -239,7 +259,7 @@ export default function Partners() {
         borderRadius: 10, fontSize: 11, color: '#6E7B8F', lineHeight: 1.7,
       }}>
         <strong style={{ color: '#C9D1DC' }}>Disclosure:</strong> These are affiliate partnerships.
-        When you use these links, TickShift earns a commission at no extra cost to you —
+        When you use these links or codes, TickShift earns a commission at no extra cost to you —
         which helps keep the Academy running. We only partner with platforms we actually use and trust.
       </div>
     </div>
