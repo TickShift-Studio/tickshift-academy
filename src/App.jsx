@@ -1,73 +1,53 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
-import Sidebar from './components/Sidebar'
+import Navbar from './components/Navbar'
 
-import Login           from './pages/Login'
-import ForgotPassword  from './pages/ForgotPassword'
-import ResetPassword   from './pages/ResetPassword'
+import Login            from './pages/Login'
+import ForgotPassword   from './pages/ForgotPassword'
+import ResetPassword    from './pages/ResetPassword'
 import StudentDashboard from './pages/student/Dashboard'
-import MyCourses       from './pages/student/Courses'
-import CoursePlayer    from './pages/student/CoursePlayer'
-import Homework        from './pages/student/Homework'
-import Partners        from './pages/student/Partners'
-import AdminDashboard  from './pages/admin/Dashboard'
-import ManageCourses   from './pages/admin/Courses'
+import MyCourses        from './pages/student/Courses'
+import CoursePlayer     from './pages/student/CoursePlayer'
+import Homework         from './pages/student/Homework'
+import Partners         from './pages/student/Partners'
+import AdminDashboard   from './pages/admin/Dashboard'
+import ManageCourses    from './pages/admin/Courses'
 import ManageAssignments from './pages/admin/Assignments'
-import ManageStudents  from './pages/admin/Students'
+import ManageStudents   from './pages/admin/Students'
 
-function AppLoadingShell() {
+function Spinner() {
   return (
-    <div style={{
-      minHeight: '100vh', background: '#08162E',
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', gap: 20,
-    }}>
-      <div style={{
-        fontFamily: "'Montserrat', sans-serif", fontWeight: 900,
-        fontSize: 22, letterSpacing: 3, color: '#fff',
-      }}>TICKSHIFT</div>
-      <div style={{
-        width: 36, height: 36,
-        border: '3px solid rgba(15,111,255,0.15)',
-        borderTopColor: '#0F6FFF',
-        borderRadius: '50%',
-        animation: 'spin 0.7s linear infinite',
-      }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18 }}>
+      <div style={{ fontFamily: 'var(--font-head)', fontWeight: 900, fontSize: 20, letterSpacing: 3, color: 'var(--white)' }}>TICKSHIFT</div>
+      <div style={{ width: 32, height: 32, border: '2.5px solid rgba(15,111,255,0.18)', borderTopColor: 'var(--blue)', borderRadius: '50%', animation: 'spin 0.75s linear infinite' }} />
     </div>
   )
 }
 
 function ProtectedLayout({ children, adminOnly = false }) {
   const { user, profile, loading } = useAuth()
-  if (loading) return <AppLoadingShell />
-  if (!user)   return <Navigate to="/login" replace />
-  if (adminOnly && profile !== null && profile?.role !== 'admin') {
-    return <Navigate to="/dashboard" replace />
-  }
+  if (loading) return <Spinner />
+  if (!user) return <Navigate to="/login" replace />
+  if (adminOnly && profile !== null && profile?.role !== 'admin') return <Navigate to="/dashboard" replace />
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#060E1F' }}>
-      <Sidebar />
-      <div style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>{children}</div>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      <Navbar />
+      <main style={{ maxWidth: 1280, margin: '0 auto', padding: '2rem 1.5rem' }}>
+        {children}
+      </main>
     </div>
   )
 }
 
 function AppRoutes() {
   const { user, profile, loading } = useAuth()
-
-  if (loading) return <AppLoadingShell />
+  if (loading) return <Spinner />
 
   return (
     <Routes>
-      <Route
-        path="/login"
-        element={
-          user
-            ? <Navigate to={profile?.role === 'admin' ? '/admin' : '/dashboard'} replace />
-            : <Login />
-        }
-      />
+      <Route path="/login" element={
+        user ? <Navigate to={profile?.role === 'admin' ? '/admin' : '/dashboard'} replace /> : <Login />
+      } />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password"  element={<ResetPassword />} />
 

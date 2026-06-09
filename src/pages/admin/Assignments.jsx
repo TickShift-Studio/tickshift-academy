@@ -1,66 +1,24 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../supabase'
 
-const css = `@keyframes spin { to { transform: rotate(360deg) } }`
+const EMPTY = { title: '', description: '', due_date: '', course_id: '' }
 
-const inputStyle = {
-  display: 'block', width: '100%', padding: '9px 12px',
-  background: 'rgba(5,14,34,0.8)', border: '1px solid rgba(60,203,255,0.15)',
-  borderRadius: 8, color: '#F8FFFF',
-  fontFamily: "'Open Sans', sans-serif", fontSize: 13, outline: 'none',
-  transition: 'border-color 0.15s', boxSizing: 'border-box',
-}
-
-function Label({ children }) {
-  return (
-    <label style={{
-      display: 'block', fontSize: 10, fontWeight: 700,
-      letterSpacing: 1, textTransform: 'uppercase',
-      color: '#6E7B8F', marginBottom: 5,
-    }}>{children}</label>
-  )
-}
-
-function GradientBtn({ children, danger, sm, disabled, onClick, type = 'button' }) {
-  const base = {
-    padding: sm ? '6px 14px' : '10px 20px',
-    borderRadius: 8, border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
-    fontFamily: "'Montserrat', sans-serif", fontWeight: 700,
-    fontSize: sm ? 11 : 12, letterSpacing: 0.5,
-    opacity: disabled ? 0.5 : 1, transition: 'opacity 0.15s',
-  }
-  if (danger) return (
-    <button type={type} onClick={onClick} disabled={disabled} style={{
-      ...base, background: 'rgba(231,76,60,0.1)',
-      border: '1px solid rgba(231,76,60,0.3)', color: '#E74C3C',
-    }}>{children}</button>
-  )
-  return (
-    <button type={type} onClick={onClick} disabled={disabled} style={{
-      ...base,
-      background: disabled ? 'rgba(13,95,224,0.4)' : 'linear-gradient(135deg, #0F6FFF, #3CCBFF)',
-      color: '#fff', boxShadow: disabled ? 'none' : '0 4px 14px rgba(15,111,255,0.3)',
-    }}>{children}</button>
-  )
-}
-
-export default function ManageAssignments() {
+export default function AdminAssignments() {
   const [assignments, setAssignments] = useState([])
   const [courses, setCourses]         = useState([])
   const [submissions, setSubmissions] = useState([])
-  const [showForm, setShowForm]       = useState(false)
-  const [form, setForm] = useState({ title: '', description: '', due_date: '', course_id: '' })
-  const [saving, setSaving]           = useState(false)
   const [loading, setLoading]         = useState(true)
-  const [expandedSubs, setExpandedSubs] = useState(null)
-  const [subDetails, setSubDetails]   = useState([])
+  const [form, setForm]               = useState(null)
+  const [saving, setSaving]           = useState(false)
+  const [err, setErr]                 = useState('')
+  const [expanded, setExpanded]       = useState(null)
 
   useEffect(() => {
     async function load() {
       const [a, c, s] = await Promise.all([
         supabase.from('assignments').select('*, courses(title)').order('created_at', { ascending: false }),
         supabase.from('courses').select('id, title').order('position'),
-        supabase.from('submissions').select('assignment_id'),
+        supabase.from('submissions').select('*, profiles(full_name, email)'),
       ])
       setAssignments(a.data || [])
       setCourses(c.data || [])
@@ -70,234 +28,150 @@ export default function ManageAssignments() {
     load()
   }, [])
 
-  async function addAssignment() {
-    if (!form.title.trim()) return
-    setSaving(true)
-    const { data, error } = await supabase
-      .from('assignments')
-      .insert({
-        title:       form.title.trim(),
-        description: form.description.trim(),
-        due_date:    form.due_date.trim(),
-        course_id:   form.course_id || null,
-      })
-      .select('*, courses(title)').single()
-    if (!error) {
-      setAssignments(prev => [data, ...prev])
-      setForm({ title: '', description: '', due_date: '', course_id: '' })
-      setShowForm(false)
+  function assignmentSubs(aId) { return submissions.filter(s => s.assignment_id === aId) }
+
+  async function save(e) {
+    e.preventDefault()
+    if (!form.title.trim()) { setErr('Title is required.'); return }
+    setSaving(true); setErr('')
+    const { id, ...fields } = form
+    const payload = { ...fields, course_id: fields.course_id || null }
+    let data, error
+    if (id) {
+      ({ data, error } = await supabase.from('assignments').update(payload).eq('id', id).select('*, courses(title)').single())
+      if (!error) setAssignments(prev => prev.map(a => a.id === id ? data : a))
+    } else {
+      ({ data, error } = await supabase.from('assignments').insert(payload).select('*, courses(title)').single())
+      if (!error) setAssignments(prev => [data, ...prev])
     }
+    if (error) setErr(error.message)
+    else setForm(null)
     setSaving(false)
   }
 
-  async function deleteAssignment(id) {
-    if (!confirm('Delete this assignment and all student submissions?')) return
+  async function del(id) {
+    if (!confirm('Delete this assignment?')) return
     await supabase.from('assignments').delete().eq('id', id)
     setAssignments(prev => prev.filter(a => a.id !== id))
+    setSubmissions(prev => prev.filter(s => s.assignment_id !== id))
+    if (expanded === id) setExpanded(null)
   }
 
-  async function viewSubmissions(assignmentId) {
-    if (expandedSubs === assignmentId) { setExpandedSubs(null); return }
-    const { data } = await supabase
-      .from('submissions')
-      .select('*, profiles(full_name, email)')
-      .eq('assignment_id', assignmentId)
-    setSubDetails(data || [])
-    setExpandedSubs(assignmentId)
-  }
-
-  const subCount = id => submissions.filter(s => s.assignment_id === id).length
-
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#08162E' }}>
-      <style>{css}</style>
-      <div style={{ width: 38, height: 38, border: '3px solid rgba(15,111,255,0.2)', borderTopColor: '#0F6FFF', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-    </div>
-  )
+  const inputStyle = { display: 'block', width: '100%', padding: '9px 11px', background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 'var(--radius-sm)', color: 'var(--white)', fontFamily: 'var(--font-body)', fontSize: 13, outline: 'none' }
+  const labelStyle = { display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 5 }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#08162E', padding: '2rem 2.25rem', fontFamily: "'Open Sans', sans-serif" }}>
-      <style>{css}</style>
-
-      {/* Header */}
+    <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem' }}>
         <div>
-          <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 24, color: '#fff', marginBottom: 4 }}>
-            Assignments
-          </div>
-          <p style={{ fontSize: 13, color: '#6E7B8F', margin: 0 }}>
-            {assignments.length} assignment{assignments.length !== 1 ? 's' : ''} · {submissions.length} total submission{submissions.length !== 1 ? 's' : ''}
-          </p>
+          <h1 style={{ fontFamily: 'var(--font-head)', fontWeight: 900, fontSize: 28, color: 'var(--white)', marginBottom: 4 }}>Assignments</h1>
+          <p style={{ fontSize: 13, color: 'var(--muted)' }}>Create and review student work.</p>
         </div>
-        <GradientBtn onClick={() => setShowForm(true)}>+ Add Assignment</GradientBtn>
+        <button onClick={() => { setForm({ ...EMPTY }); setErr('') }}
+          style={{ padding: '10px 18px', background: 'var(--blue)', border: 'none', borderRadius: 'var(--radius-sm)', color: '#fff', cursor: 'pointer', fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 12 }}>
+          + New Assignment
+        </button>
       </div>
 
-      {/* New Assignment Form */}
-      {showForm && (
-        <div style={{
-          background: 'rgba(11,22,40,0.95)', border: '1px solid rgba(60,203,255,0.2)',
-          borderRadius: 14, padding: '1.5rem', marginBottom: '1.25rem',
-        }}>
-          <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 13, color: '#3CCBFF', marginBottom: '1rem', letterSpacing: 0.5 }}>
-            New Assignment
-          </div>
-
-          <div style={{ marginBottom: '0.85rem' }}>
-            <Label>Course (optional)</Label>
-            <select
-              value={form.course_id}
-              onChange={e => setForm(p => ({ ...p, course_id: e.target.value }))}
-              style={{ ...inputStyle }}
-              onFocus={e => { e.target.style.borderColor = '#0F6FFF' }}
-              onBlur={e => { e.target.style.borderColor = 'rgba(60,203,255,0.15)' }}
-            >
-              <option value="">No specific course</option>
-              {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-            </select>
-          </div>
-
-          <div style={{ marginBottom: '0.85rem' }}>
-            <Label>Title</Label>
-            <input
-              style={inputStyle} placeholder="e.g. Week 1 Reflection"
-              value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
-              onFocus={e => { e.target.style.borderColor = '#0F6FFF' }}
-              onBlur={e => { e.target.style.borderColor = 'rgba(60,203,255,0.15)' }}
-            />
-          </div>
-
-          <div style={{ marginBottom: '0.85rem' }}>
-            <Label>Instructions for Students</Label>
-            <textarea
-              value={form.description}
-              onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-              placeholder="What should students do and submit?"
-              rows={4}
-              style={{ ...inputStyle, resize: 'vertical', minHeight: 90, lineHeight: 1.6 }}
-              onFocus={e => { e.target.style.borderColor = '#0F6FFF' }}
-              onBlur={e => { e.target.style.borderColor = 'rgba(60,203,255,0.15)' }}
-            />
-          </div>
-
-          <div style={{ marginBottom: '1rem' }}>
-            <Label>Due Date</Label>
-            <input
-              style={inputStyle} placeholder="e.g. July 15, 2026"
-              value={form.due_date} onChange={e => setForm(p => ({ ...p, due_date: e.target.value }))}
-              onFocus={e => { e.target.style.borderColor = '#0F6FFF' }}
-              onBlur={e => { e.target.style.borderColor = 'rgba(60,203,255,0.15)' }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', gap: 8 }}>
-            <GradientBtn onClick={addAssignment} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Assignment'}
-            </GradientBtn>
-            <GradientBtn danger onClick={() => setShowForm(false)}>Cancel</GradientBtn>
+      {/* Form modal */}
+      {form && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.5rem', width: '100%', maxWidth: 480 }}>
+            <h2 style={{ fontFamily: 'var(--font-head)', fontWeight: 800, fontSize: 17, color: 'var(--white)', marginBottom: '1.25rem' }}>{form.id ? 'Edit Assignment' : 'New Assignment'}</h2>
+            <form onSubmit={save}>
+              <div style={{ marginBottom: '0.9rem' }}>
+                <label style={labelStyle}>Title *</label>
+                <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} style={inputStyle} placeholder="Assignment title" onFocus={e => { e.target.style.borderColor = 'var(--blue)' }} onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }} />
+              </div>
+              <div style={{ marginBottom: '0.9rem' }}>
+                <label style={labelStyle}>Instructions</label>
+                <textarea value={form.description || ''} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={4} style={{ ...inputStyle, resize: 'vertical' }} placeholder="What should students do?" onFocus={e => { e.target.style.borderColor = 'var(--blue)' }} onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.9rem' }}>
+                <div>
+                  <label style={labelStyle}>Course (optional)</label>
+                  <select value={form.course_id || ''} onChange={e => setForm(p => ({ ...p, course_id: e.target.value }))}
+                    style={{ ...inputStyle }}>
+                    <option value="">— General —</option>
+                    {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Due Date</label>
+                  <input type="date" value={form.due_date || ''} onChange={e => setForm(p => ({ ...p, due_date: e.target.value }))} style={inputStyle} onFocus={e => { e.target.style.borderColor = 'var(--blue)' }} onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }} />
+                </div>
+              </div>
+              {err && <div style={{ padding: '9px 12px', borderRadius: 7, marginBottom: '0.9rem', background: 'rgba(231,76,60,0.08)', border: '1px solid rgba(231,76,60,0.3)', color: 'var(--danger)', fontSize: 13 }}>{err}</div>}
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => setForm(null)} style={{ padding: '9px 16px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 12 }}>Cancel</button>
+                <button type="submit" disabled={saving} style={{ padding: '9px 20px', background: 'var(--blue)', border: 'none', borderRadius: 'var(--radius-sm)', color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 12, opacity: saving ? 0.6 : 1 }}>{saving ? 'Saving…' : 'Save'}</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
-      {assignments.length === 0 && !showForm && (
-        <div style={{
-          background: 'rgba(15,111,255,0.04)', border: '1px solid rgba(15,111,255,0.12)',
-          borderRadius: 12, padding: '1.5rem', fontSize: 13, color: '#6E7B8F',
-        }}>
-          No assignments yet. Click "+ Add Assignment" to create one.
+      {loading ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
+          <div style={{ width: 28, height: 28, border: '2px solid rgba(15,111,255,0.18)', borderTopColor: 'var(--blue)', borderRadius: '50%', animation: 'spin 0.75s linear infinite' }} />
         </div>
-      )}
-
-      {/* Assignment list */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {assignments.map((a) => {
-          const count = subCount(a.id)
-          const isExpanded = expandedSubs === a.id
-          return (
-            <div key={a.id} style={{
-              background: 'rgba(11,22,40,0.9)', border: '1px solid rgba(15,111,255,0.14)',
-              borderRadius: 14, overflow: 'hidden',
-            }}>
-              <div style={{ height: 3, background: 'linear-gradient(90deg, #0F6FFF, #3CCBFF)' }} />
-
-              <div style={{ padding: '1.25rem 1.4rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 8 }}>
-                  <div>
-                    <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 15, color: '#F8FFFF', marginBottom: 6 }}>
-                      {a.title}
+      ) : assignments.length === 0 ? (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '2rem', textAlign: 'center', fontSize: 13, color: 'var(--muted)' }}>
+          No assignments yet. Click "+ New Assignment" to create one.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {assignments.map(a => {
+            const subs = assignmentSubs(a.id)
+            const open = expanded === a.id
+            return (
+              <div key={a.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '1rem 1.25rem' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 14, color: 'var(--white)', marginBottom: 4 }}>{a.title}</div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {a.courses && <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.8, background: 'var(--blue-dim)', border: '1px solid rgba(15,111,255,0.25)', color: 'var(--cyan)', borderRadius: 20, padding: '2px 9px' }}>{a.courses.title}</span>}
+                      {a.due_date && <span style={{ fontSize: 10, color: 'var(--muted)' }}>Due {a.due_date}</span>}
+                      <span style={{ fontSize: 10, color: 'var(--muted)' }}>{subs.length} submission{subs.length !== 1 ? 's' : ''}</span>
                     </div>
-                    {a.courses && (
-                      <span style={{
-                        fontSize: 9.5, fontWeight: 700,
-                        background: 'rgba(15,111,255,0.12)',
-                        border: '1px solid rgba(60,203,255,0.2)',
-                        color: '#3CCBFF', borderRadius: 100, padding: '2px 9px',
-                      }}>{a.courses.title}</span>
-                    )}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                    {a.due_date && <span style={{ fontSize: 11, color: '#6E7B8F' }}>Due {a.due_date}</span>}
-                    <GradientBtn sm danger onClick={() => deleteAssignment(a.id)}>Delete</GradientBtn>
-                  </div>
+                  <button onClick={() => setExpanded(open ? null : a.id)}
+                    style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--silver)', cursor: 'pointer', padding: '5px 11px', fontSize: 11, fontFamily: 'var(--font-head)', fontWeight: 700 }}>
+                    {open ? 'Hide' : `Submissions (${subs.length})`}
+                  </button>
+                  <button onClick={() => { setForm({ ...a, course_id: a.course_id || '' }); setErr('') }}
+                    style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--silver)', cursor: 'pointer', padding: '5px 11px', fontSize: 11, fontFamily: 'var(--font-head)', fontWeight: 700 }}>Edit</button>
+                  <button onClick={() => del(a.id)}
+                    style={{ background: 'transparent', border: '1px solid rgba(231,76,60,0.3)', borderRadius: 'var(--radius-sm)', color: 'var(--danger)', cursor: 'pointer', padding: '5px 11px', fontSize: 11, fontFamily: 'var(--font-head)', fontWeight: 700 }}>Del</button>
                 </div>
 
-                <p style={{ fontSize: 12.5, color: '#8CA0BE', lineHeight: 1.7, marginBottom: '1rem' }}>
-                  {a.description}
-                </p>
-
-                {/* Submissions toggle */}
-                <button
-                  onClick={() => viewSubmissions(a.id)}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 8,
-                    padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                    background: count > 0 ? 'rgba(60,203,255,0.08)' : 'rgba(255,255,255,0.04)',
-                    color: count > 0 ? '#3CCBFF' : '#6E7B8F',
-                    fontFamily: "'Montserrat', sans-serif", fontWeight: 700,
-                    fontSize: 11, letterSpacing: 0.3, transition: 'all 0.15s',
-                  }}
-                >
-                  <span style={{
-                    background: count > 0 ? 'rgba(60,203,255,0.15)' : 'rgba(255,255,255,0.08)',
-                    borderRadius: '50%', width: 20, height: 20,
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 10, fontWeight: 900,
-                  }}>{count}</span>
-                  Submission{count !== 1 ? 's' : ''} {isExpanded ? '▲' : '▼'}
-                </button>
-
-                {/* Expanded submissions */}
-                {isExpanded && (
-                  <div style={{ marginTop: '1rem' }}>
-                    {subDetails.length === 0 ? (
-                      <div style={{ fontSize: 12, color: '#6E7B8F', padding: '0.5rem 0' }}>No submissions yet.</div>
+                {open && (
+                  <div style={{ borderTop: '1px solid var(--border)' }}>
+                    {subs.length === 0 ? (
+                      <div style={{ padding: '1rem 1.25rem', fontSize: 12, color: 'var(--muted)' }}>No submissions yet.</div>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {subDetails.map(sub => (
-                          <div key={sub.id} style={{
-                            background: 'rgba(5,14,34,0.7)',
-                            border: '1px solid rgba(15,111,255,0.12)',
-                            borderRadius: 10, padding: '1rem 1.1rem',
-                          }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                              <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 13, color: '#F8FFFF' }}>
-                                {sub.profiles?.full_name || sub.profiles?.email || 'Student'}
-                              </div>
-                              <div style={{ fontSize: 10.5, color: '#6E7B8F' }}>
-                                {new Date(sub.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                              </div>
+                      subs.map((sub, i) => (
+                        <div key={sub.id} style={{ padding: '1rem 1.25rem', borderBottom: i < subs.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                            <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--blue-dim)', border: '1px solid rgba(15,111,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'var(--blue)', flexShrink: 0 }}>
+                              {(sub.profiles?.full_name || sub.profiles?.email || '?')[0].toUpperCase()}
                             </div>
-                            <p style={{ fontSize: 12.5, color: '#C9D1DC', lineHeight: 1.7, margin: 0 }}>{sub.content}</p>
+                            <div>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--white)' }}>{sub.profiles?.full_name || sub.profiles?.email || 'Unknown'}</div>
+                              {sub.submitted_at && <div style={{ fontSize: 10, color: 'var(--muted)' }}>{new Date(sub.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>}
+                            </div>
                           </div>
-                        ))}
-                      </div>
+                          <div style={{ fontSize: 12, color: 'var(--silver)', lineHeight: 1.7, background: 'rgba(0,0,0,0.2)', borderRadius: 6, padding: '0.7rem 0.9rem' }}>{sub.content}</div>
+                        </div>
+                      ))
                     )}
                   </div>
                 )}
               </div>
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

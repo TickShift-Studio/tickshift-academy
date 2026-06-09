@@ -1,164 +1,185 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../../supabase'
-import { useAuth } from '../../context/AuthContext'
-
-function StatusBadge({ status }) {
-  const map = {
-    active:   { bg: 'rgba(46,204,113,0.12)', border: 'rgba(46,204,113,0.3)',  color: '#2ECC71', label: 'Active' },
-    inactive: { bg: 'rgba(231,76,60,0.1)',   border: 'rgba(231,76,60,0.3)',   color: '#E74C3C', label: 'Inactive' },
-    revoked:  { bg: 'rgba(149,165,166,0.1)', border: 'rgba(149,165,166,0.3)', color: '#95A5A6', label: 'Revoked' },
-    none:     { bg: 'rgba(110,123,143,0.1)', border: 'rgba(110,123,143,0.3)', color: '#6E7B8F', label: 'No Access' },
-  }
-  const s = map[status] ?? map.none
-  return <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, background: s.bg, border: `1px solid ${s.border}`, color: s.color, borderRadius: 20, padding: '2px 10px' }}>{s.label}</span>
-}
 
 export default function AdminStudents() {
-  const { user } = useAuth()
-  const [students, setStudents] = useState([])
-  const [memberships, setMemberships] = useState({})
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [toast, setToast] = useState(null)
-  const [inviteOpen, setInviteOpen] = useState(false)
+  const [students, setStudents]   = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [search, setSearch]       = useState('')
   const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteName, setInviteName] = useState('')
-  const [inviting, setInviting] = useState(false)
+  const [inviting, setInviting]   = useState(false)
+  const [inviteMsg, setInviteMsg] = useState(null)
+  const [actionLoading, setActionLoading] = useState(null)
+  const mountedRef = useRef(true)
 
-  useEffect(() => { loadData() }, [])
+  useEffect(() => {
+    return () => { mountedRef.current = false }
+  }, [])
 
-  async function loadData() {
-    setLoading(true)
-    const [p, m] = await Promise.all([
-      supabase.from('profiles').select('*').eq('role', 'student').order('full_name'),
-      supabase.from('memberships').select('*'),
-    ])
-    setStudents(p.data || [])
-    const map = {}
-    for (const mb of m.data || []) map[mb.user_id] = mb
-    setMemberships(map)
-    setLoading(false)
-  }
+  useEffect(() => {
+    async function load() {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, is_admin, created_at')
+        .order('created_at', { ascending: false })
+      if (mountedRef.current) {
+        setStudents(data || [])
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
 
-  function showToast(msg, ok = true) {
-    setToast({ msg, ok })
-    setTimeout(() => setToast(null), 4000)
-  }
-
-  async function callAdmin(body) {
-    const { data: { session } } = await supabase.auth.getSession()
-    const res = await fetch('/api/admin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify(body),
-    })
-    return res.json()
+  async function invite(e) {
+    e.preventDefault()
+    if (!inviteEmail.trim()) return
+    setInviting(true); setInviteMsg(null)
+    try {
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'invite', email: inviteEmail.trim() }),
+      })
+      const json = await res.json()
+      if (!mountedRef.current) return
+      if (res.ok) {
+        setInviteMsg({ type: 'success', text: `Invite sent to ${inviteEmail}.` })
+        setInviteEmail('')
+      } else {
+        setInviteMsg({ type: 'error', text: json.error || 'Failed to invite.' })
+      }
+    } catch (err) {
+      if (mountedRef.current) setInviteMsg({ type: 'error', text: err.message })
+    } finally {
+      if (mountedRef.current) setInviting(false)
+    }
   }
 
   async function grantAccess(userId) {
-    const r = await callAdmin({ action: 'grant-access', userId })
-    if (r.success) { showToast('Access granted'); loadData() }
-    else showToast(r.error || 'Failed', false)
+    setActionLoading(userId + '_grant')
+    await fetch('/api/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'grant', userId }),
+    })
+    if (mountedRef.current) setActionLoading(null)
   }
 
   async function revokeAccess(userId) {
-    const r = await callAdmin({ action: 'revoke-access', userId })
-    if (r.success) { showToast('Access revoked'); loadData() }
-    else showToast(r.error || 'Failed', false)
+    if (!confirm('Revoke this student's membership?')) return
+    setActionLoading(userId + '_revoke')
+    await fetch('/api/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'revoke', userId }),
+    })
+    if (mountedRef.current) setActionLoading(null)
   }
 
-  async function resendEmail(email) {
-    const r = await callAdmin({ action: 'resend-invite', email })
-    if (r.success) showToast('Email sent!')
-    else showToast(r.error || 'Failed', false)
-  }
-
-  async function inviteStudent(e) {
-    e.preventDefault()
-    setInviting(true)
-    const r = await callAdmin({ action: 'invite-student', email: inviteEmail, fullName: inviteName })
-    setInviting(false)
-    if (r.success) { showToast('Student invited!'); setInviteOpen(false); setInviteEmail(''); setInviteName(''); loadData() }
-    else showToast(r.error || 'Failed', false)
-  }
-
-  const filtered = students.filter(s =>
-    s.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-    s.email?.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = students.filter(s => {
+    const q = search.toLowerCase()
+    return !q || (s.full_name || '').toLowerCase().includes(q) || (s.email || '').toLowerCase().includes(q)
+  })
 
   return (
-    <div style={{ minHeight: '100vh', background: '#08162E', padding: '2rem 2.25rem', fontFamily: "'Open Sans', sans-serif" }}>
-      {toast && (
-        <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 1000, background: toast.ok ? 'rgba(46,204,113,0.15)' : 'rgba(231,76,60,0.15)', border: `1px solid ${toast.ok ? 'rgba(46,204,113,0.4)' : 'rgba(231,76,60,0.4)'}`, borderRadius: 10, padding: '0.75rem 1.25rem', color: toast.ok ? '#2ECC71' : '#E74C3C', fontSize: 13, fontWeight: 600 }}>{toast.msg}</div>
-      )}
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem' }}>
-        <div>
-          <h1 style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 24, color: '#fff', margin: '0 0 4px' }}>Students</h1>
-          <p style={{ color: '#6E7B8F', fontSize: 13, margin: 0 }}>{students.length} total students</p>
-        </div>
-        <button onClick={() => setInviteOpen(true)} style={{ padding: '0.65rem 1.25rem', background: 'linear-gradient(135deg, #0F6FFF, #3CCBFF)', border: 'none', borderRadius: 9, color: '#fff', fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 0.5, cursor: 'pointer' }}>+ Invite Student</button>
+    <div>
+      <div style={{ marginBottom: '1.75rem' }}>
+        <h1 style={{ fontFamily: 'var(--font-head)', fontWeight: 900, fontSize: 28, color: 'var(--white)', marginBottom: 4 }}>Students</h1>
+        <p style={{ fontSize: 13, color: 'var(--muted)' }}>Manage access and invite new members.</p>
       </div>
 
-      <input
-        placeholder="Search by name or email…"
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        style={{ width: '100%', maxWidth: 380, background: 'rgba(15,111,255,0.06)', border: '1px solid rgba(60,203,255,0.2)', borderRadius: 9, padding: '0.65rem 1rem', color: '#fff', fontSize: 13, outline: 'none', marginBottom: '1.25rem', boxSizing: 'border-box' }}
-      />
-
-      {loading ? (
-        <div style={{ color: '#6E7B8F', fontSize: 13 }}>Loading…</div>
-      ) : (
-        <div style={{ background: '#0B1628', border: '1px solid rgba(15,111,255,0.14)', borderRadius: 14, overflow: 'hidden' }}>
-          {filtered.map((student, i) => {
-            const mb = memberships[student.id]
-            const status = mb?.status ?? 'none'
-            return (
-              <div key={student.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', borderBottom: i < filtered.length - 1 ? '1px solid rgba(15,111,255,0.08)' : 'none', gap: 12, flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-                  <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg, #0F6FFF, #3CCBFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
-                    {student.full_name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?'}
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#F8FFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{student.full_name || 'Unknown'}</div>
-                    <div style={{ fontSize: 11, color: '#6E7B8F', marginTop: 2 }}>{student.email}</div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
-                  <StatusBadge status={status} />
-                  {status !== 'active'
-                    ? <button onClick={() => grantAccess(student.id)} style={{ padding: '5px 12px', borderRadius: 7, background: 'rgba(46,204,113,0.1)', border: '1px solid rgba(46,204,113,0.3)', color: '#2ECC71', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>Grant</button>
-                    : <button onClick={() => revokeAccess(student.id)} style={{ padding: '5px 12px', borderRadius: 7, background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.3)', color: '#E74C3C', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>Revoke</button>
-                  }
-                  <button onClick={() => resendEmail(student.email)} style={{ padding: '5px 12px', borderRadius: 7, background: 'rgba(15,111,255,0.1)', border: '1px solid rgba(15,111,255,0.3)', color: '#3CCBFF', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>Resend Email</button>
-                </div>
-              </div>
-            )
-          })}
-          {filtered.length === 0 && <div style={{ padding: '2rem', textAlign: 'center', color: '#6E7B8F', fontSize: 13 }}>No students found.</div>}
-        </div>
-      )}
-
-      {inviteOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '1rem' }}>
-          <div style={{ background: '#0B1628', border: '1px solid rgba(60,203,255,0.2)', borderRadius: 16, padding: '2rem', width: '100%', maxWidth: 420 }}>
-            <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 18, color: '#fff', marginBottom: '0.5rem' }}>Invite Student</div>
-            <p style={{ fontSize: 13, color: '#6E7B8F', marginBottom: '1.5rem' }}>Creates their account, grants access, and sends a password setup email.</p>
-            <form onSubmit={inviteStudent}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: '#3CCBFF', textTransform: 'uppercase', marginBottom: 6 }}>Email</label>
-              <input type="email" required value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="student@example.com" style={{ width: '100%', background: 'rgba(15,111,255,0.06)', border: '1px solid rgba(60,203,255,0.2)', borderRadius: 9, padding: '0.7rem 1rem', color: '#fff', fontSize: 13, outline: 'none', marginBottom: '1rem', boxSizing: 'border-box' }} />
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: '#3CCBFF', textTransform: 'uppercase', marginBottom: 6 }}>Full Name (optional)</label>
-              <input type="text" value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="John Doe" style={{ width: '100%', background: 'rgba(15,111,255,0.06)', border: '1px solid rgba(60,203,255,0.2)', borderRadius: 9, padding: '0.7rem 1rem', color: '#fff', fontSize: 13, outline: 'none', marginBottom: '1.5rem', boxSizing: 'border-box' }} />
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button type="submit" disabled={inviting} style={{ flex: 1, padding: '0.75rem', background: 'linear-gradient(135deg, #0F6FFF, #3CCBFF)', border: 'none', borderRadius: 9, color: '#fff', fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 12, cursor: inviting ? 'not-allowed' : 'pointer' }}>{inviting ? 'Sending…' : 'Send Invite'}</button>
-                <button type="button" onClick={() => setInviteOpen(false)} style={{ flex: 1, padding: '0.75rem', background: 'transparent', border: '1px solid rgba(60,203,255,0.2)', borderRadius: 9, color: '#6E7B8F', fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Cancel</button>
-              </div>
-            </form>
+      {/* Invite card */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.25rem 1.4rem', marginBottom: '1.5rem' }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: '0.75rem' }}>Invite Student</div>
+        <form onSubmit={invite} style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <input
+            type="email"
+            placeholder="student@email.com"
+            value={inviteEmail}
+            onChange={e => setInviteEmail(e.target.value)}
+            style={{ flex: 1, minWidth: 200, padding: '9px 12px', background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 'var(--radius-sm)', color: 'var(--white)', fontFamily: 'var(--font-body)', fontSize: 13, outline: 'none' }}
+            onFocus={e => { e.target.style.borderColor = 'var(--blue)' }}
+            onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
+          />
+          <button type="submit" disabled={inviting || !inviteEmail.trim()}
+            style={{ padding: '9px 20px', background: (!inviteEmail.trim() || inviting) ? 'rgba(15,111,255,0.4)' : 'var(--blue)', border: 'none', borderRadius: 'var(--radius-sm)', color: '#fff', cursor: (!inviteEmail.trim() || inviting) ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 12 }}>
+            {inviting ? 'Sending…' : 'Send Invite'}
+          </button>
+        </form>
+        {inviteMsg && (
+          <div style={{ marginTop: '0.75rem', padding: '9px 12px', borderRadius: 7, background: inviteMsg.type === 'success' ? 'rgba(46,204,113,0.08)' : 'rgba(231,76,60,0.08)', border: `1px solid ${inviteMsg.type === 'success' ? 'rgba(46,204,113,0.3)' : 'rgba(231,76,60,0.3)'}`, color: inviteMsg.type === 'success' ? 'var(--success)' : 'var(--danger)', fontSize: 13 }}>
+            {inviteMsg.text}
           </div>
+        )}
+      </div>
+
+      {/* Search */}
+      <div style={{ marginBottom: '1rem' }}>
+        <input
+          placeholder="Search by name or email…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ width: '100%', maxWidth: 360, padding: '9px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--white)', fontFamily: 'var(--font-body)', fontSize: 13, outline: 'none' }}
+          onFocus={e => { e.target.style.borderColor = 'var(--blue)' }}
+          onBlur={e => { e.target.style.borderColor = 'var(--border)' }}
+        />
+      </div>
+
+      {/* Count */}
+      <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: '0.75rem' }}>
+        {loading ? 'Loading…' : `${filtered.length} student${filtered.length !== 1 ? 's' : ''}${search ? ' matching search' : ''}`}
+      </div>
+
+      {/* Table */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+        {/* Header */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: '0.75rem', padding: '0.65rem 1.25rem', borderBottom: '1px solid var(--border)' }}>
+          {['Name', 'Email', 'Joined', 'Actions'].map(h => (
+            <div key={h} style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 1.5, color: 'var(--muted)', textTransform: 'uppercase' }}>{h}</div>
+          ))}
         </div>
-      )}
+
+        {loading ? (
+          <div style={{ padding: '2rem', textAlign: 'center' }}>
+            <div style={{ width: 24, height: 24, border: '2px solid rgba(15,111,255,0.18)', borderTopColor: 'var(--blue)', borderRadius: '50%', animation: 'spin 0.75s linear infinite', margin: '0 auto' }} />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ padding: '1.5rem', fontSize: 13, color: 'var(--muted)', textAlign: 'center' }}>
+            {search ? 'No students match your search.' : 'No students yet.'}
+          </div>
+        ) : (
+          filtered.map((s, i) => (
+            <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: '0.75rem', alignItems: 'center', padding: '0.85rem 1.25rem', borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+                <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--blue-dim)', border: '1px solid rgba(15,111,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 12, color: 'var(--blue)', flexShrink: 0 }}>
+                  {(s.full_name || s.email || '?')[0].toUpperCase()}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--white)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.full_name || '—'}</div>
+                  {s.is_admin && <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.8, background: 'rgba(15,111,255,0.15)', border: '1px solid rgba(15,111,255,0.3)', color: 'var(--blue)', borderRadius: 20, padding: '1px 7px' }}>ADMIN</span>}
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--silver)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.email}</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                {new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                <button
+                  disabled={actionLoading === s.id + '_grant'}
+                  onClick={() => grantAccess(s.id)}
+                  style={{ padding: '5px 10px', background: 'transparent', border: '1px solid rgba(46,204,113,0.3)', borderRadius: 'var(--radius-sm)', color: 'var(--success)', cursor: 'pointer', fontSize: 10, fontFamily: 'var(--font-head)', fontWeight: 700, opacity: actionLoading === s.id + '_grant' ? 0.5 : 1 }}>
+                  Grant
+                </button>
+                <button
+                  disabled={actionLoading === s.id + '_revoke'}
+                  onClick={() => revokeAccess(s.id)}
+                  style={{ padding: '5px 10px', background: 'transparent', border: '1px solid rgba(231,76,60,0.3)', borderRadius: 'var(--radius-sm)', color: 'var(--danger)', cursor: 'pointer', fontSize: 10, fontFamily: 'var(--font-head)', fontWeight: 700, opacity: actionLoading === s.id + '_revoke' ? 0.5 : 1 }}>
+                  Revoke
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   )
 }

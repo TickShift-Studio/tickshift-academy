@@ -1,279 +1,68 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { supabase } from '../../supabase'
 
-const partners = [
-  {
-    id: 'lucid',
-    name: 'Lucid Trading',
-    tagline: 'Prop Firm Evaluation Platform',
-    description: 'Take your trading to the next level with Lucid Trading. Get funded and start earning with one of the most trader-friendly prop firms in the game. Currently offering 40% off your next 4 accounts — exclusively for TickShift students.',
-    discount: '40% OFF',
-    discountDetail: 'Next 4 Accounts',
-    code: 'TickShift',
-    href: 'https://lucidtrading.com/ref/TICKSHIFT',
-    icon: '💡',
-    highlight: '#3CCBFF',
-    highlightBg: 'rgba(60,203,255,0.07)',
-    highlightBorder: 'rgba(60,203,255,0.2)',
-    stats: [
-      { label: 'Discount', value: '40%' },
-      { label: 'Accounts', value: '4x' },
-    ],
-  },
-  {
-    id: 'alphafutures',
-    name: 'Alpha Futures',
-    tagline: 'Elite Futures Prop Firm',
-    description: 'Get funded with Alpha Futures — one of the most trader-friendly futures prop firms out there. 25% off new Premium Accounts for TickShift students. Accounts from $25K–$150K with up to 90% profit splits.',
-    discount: '25% OFF',
-    discountDetail: 'New Premium Accounts',
-    code: 'Justin012755',
-    href: 'https://alpha-futures.com/',
-    icon: '📈',
-    highlight: '#0F6FFF',
-    highlightBg: 'rgba(15,111,255,0.07)',
-    highlightBorder: 'rgba(15,111,255,0.25)',
-    stats: [
-      { label: 'Discount', value: '25%' },
-      { label: 'Max Payout', value: '90%' },
-    ],
-  },
-  {
-    id: 'fundednext',
-    name: 'Funded Next',
-    tagline: 'Global Prop Trading Firm',
-    description: 'Funded Next gives traders access to simulated capital up to $300K with competitive profit splits. TickShift students get 10% off Rapid Accounts 1 Day Pass — one of the fastest ways to get funded.',
-    discount: '10% OFF',
-    discountDetail: 'Rapid Accounts 1 Day Pass',
-    code: 'REFICOFAR',
-    href: 'https://fundednext.com/',
-    icon: '🚀',
-    highlight: '#2ECC71',
-    highlightBg: 'rgba(46,204,113,0.07)',
-    highlightBorder: 'rgba(46,204,113,0.2)',
-    stats: [
-      { label: 'Discount', value: '10%' },
-      { label: 'Max Funding', value: '$300K' },
-    ],
-  },
-]
+export default function Partners() {
+  const [partners, setPartners] = useState([])
+  const [loading, setLoading]   = useState(true)
 
-function CopyButton({ text }) {
-  const [copied, setCopied] = useState(false)
-
-  function copy() {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+  useEffect(() => {
+    supabase.from('partners').select('*').order('position').then(({ data }) => {
+      setPartners(data || [])
+      setLoading(false)
     })
-  }
+  }, [])
 
-  return (
-    <button
-      onClick={copy}
-      style={{
-        padding: '5px 12px', borderRadius: 6,
-        background: copied ? 'rgba(46,204,113,0.15)' : 'rgba(15,111,255,0.12)',
-        border: `1px solid ${copied ? 'rgba(46,204,113,0.35)' : 'rgba(60,203,255,0.25)'}`,
-        color: copied ? '#2ECC71' : '#3CCBFF',
-        cursor: 'pointer', fontSize: 11, fontWeight: 700,
-        fontFamily: "'Open Sans', sans-serif",
-        transition: 'all 0.2s', letterSpacing: 0.3,
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {copied ? '✓ Copied!' : 'Copy Code'}
-    </button>
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
+      <div style={{ width: 32, height: 32, border: '2.5px solid rgba(15,111,255,0.18)', borderTopColor: 'var(--blue)', borderRadius: '50%', animation: 'spin 0.75s linear infinite' }} />
+    </div>
   )
-}
 
-function PartnerCard({ partner }) {
   return (
-    <div style={{
-      background: 'linear-gradient(135deg, rgba(13,31,60,0.9), rgba(8,18,46,0.95))',
-      border: `1px solid ${partner.highlightBorder}`,
-      borderRadius: 18, overflow: 'hidden',
-      display: 'flex', flexDirection: 'column',
-    }}>
-      {/* Header */}
-      <div style={{
-        background: partner.highlightBg,
-        borderBottom: `1px solid ${partner.highlightBorder}`,
-        padding: '1.5rem 1.75rem',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{
-              width: 52, height: 52, borderRadius: 14,
-              background: 'rgba(8,18,46,0.8)',
-              border: `1px solid ${partner.highlightBorder}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 24, flexShrink: 0,
-            }}>{partner.icon}</div>
-            <div>
-              <div style={{
-                fontFamily: "'Montserrat', sans-serif", fontWeight: 900,
-                fontSize: 18, color: '#F8FFFF', marginBottom: 4,
-              }}>{partner.name}</div>
-              <div style={{ fontSize: 11, color: '#6E7B8F', letterSpacing: 0.5 }}>{partner.tagline}</div>
-            </div>
-          </div>
-
-          {/* Discount badge */}
-          <div style={{
-            background: 'linear-gradient(135deg, #0F6FFF, #3CCBFF)',
-            borderRadius: 10, padding: '6px 14px',
-            textAlign: 'center', flexShrink: 0,
-          }}>
-            <div style={{
-              fontFamily: "'Montserrat', sans-serif", fontWeight: 900,
-              fontSize: 18, color: '#fff', lineHeight: 1,
-            }}>{partner.discount}</div>
-            <div style={{ fontSize: 8, letterSpacing: 2, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>EXCLUSIVE</div>
-          </div>
-        </div>
+    <div>
+      <div style={{ marginBottom: '1.75rem' }}>
+        <h1 style={{ fontFamily: 'var(--font-head)', fontWeight: 900, fontSize: 28, color: 'var(--white)', marginBottom: 4 }}>Partners & Discounts</h1>
+        <p style={{ fontSize: 13, color: 'var(--muted)' }}>Exclusive deals curated for TickShift Academy members.</p>
       </div>
 
-      {/* Body */}
-      <div style={{ padding: '1.5rem 1.75rem', flex: 1 }}>
-        {/* Deal detail pill */}
-        <div style={{
-          display: 'inline-block', marginBottom: '1rem',
-          background: partner.highlightBg,
-          border: `1px solid ${partner.highlightBorder}`,
-          borderRadius: 20, padding: '4px 12px',
-          fontSize: 11, fontWeight: 700, color: partner.highlight,
-          letterSpacing: 0.3,
-        }}>
-          {partner.discountDetail}
+      {partners.length === 0 ? (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '2.5rem', textAlign: 'center' }}>
+          <div style={{ fontSize: 32, marginBottom: 10 }}>🤝</div>
+          <div style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 15, color: 'var(--white)', marginBottom: 4 }}>Partner deals coming soon</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)' }}>We're working on exclusive perks for members. Check back soon!</div>
         </div>
-
-        <p style={{ fontSize: 13, color: '#C9D1DC', lineHeight: 1.75, marginBottom: '1.5rem' }}>
-          {partner.description}
-        </p>
-
-        {/* Stats */}
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-          {partner.stats.map(s => (
-            <div key={s.label} style={{
-              background: 'rgba(8,18,46,0.8)',
-              border: '1px solid rgba(15,111,255,0.12)',
-              borderRadius: 10, padding: '0.7rem 1.1rem', flex: 1,
-            }}>
-              <div style={{
-                fontSize: 9, fontWeight: 700, letterSpacing: 1.5,
-                color: '#6E7B8F', textTransform: 'uppercase', marginBottom: 4,
-              }}>{s.label}</div>
-              <div style={{
-                fontFamily: "'Montserrat', sans-serif", fontWeight: 900,
-                fontSize: 20, color: partner.highlight,
-              }}>{s.value}</div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+          {partners.map(p => (
+            <div key={p.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'border-color 0.15s, transform 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(15,111,255,0.4)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateY(0)' }}
+            >
+              {p.logo_url && (
+                <div style={{ height: 130, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', borderBottom: '1px solid var(--border)' }}>
+                  <img src={p.logo_url} alt={p.name} style={{ maxHeight: 80, maxWidth: '100%', objectFit: 'contain' }} />
+                </div>
+              )}
+              <div style={{ padding: '1.1rem 1.25rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 15, color: 'var(--white)', marginBottom: 4 }}>{p.name}</div>
+                {p.description && <p style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 'auto', paddingBottom: '1rem' }}>{p.description}</p>}
+                {p.discount_code && (
+                  <div style={{ background: 'var(--blue-dim)', border: '1px solid rgba(15,111,255,0.25)', borderRadius: 'var(--radius-sm)', padding: '0.6rem 0.9rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>Promo code</span>
+                    <span style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 13, color: 'var(--cyan)', letterSpacing: 1 }}>{p.discount_code}</span>
+                  </div>
+                )}
+                {p.url && (
+                  <a href={p.url} target="_blank" rel="noopener noreferrer"
+                    style={{ display: 'block', textAlign: 'center', padding: '10px', background: 'var(--blue)', borderRadius: 'var(--radius-sm)', color: '#fff', fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 12, letterSpacing: 0.5, textDecoration: 'none' }}>
+                    Visit Partner →
+                  </a>
+                )}
+              </div>
             </div>
           ))}
         </div>
-
-        {/* Discount code box */}
-        <div style={{
-          background: 'rgba(8,18,46,0.8)',
-          border: `1px solid ${partner.highlightBorder}`,
-          borderRadius: 10, padding: '1rem 1.1rem',
-          marginBottom: '1.25rem',
-        }}>
-          <div style={{
-            fontSize: 9.5, fontWeight: 700, letterSpacing: 1.5,
-            color: '#6E7B8F', textTransform: 'uppercase', marginBottom: 8,
-          }}>Discount Code</div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-            <div style={{
-              fontFamily: "'Montserrat', sans-serif", fontWeight: 900,
-              fontSize: 22, color: partner.highlight, letterSpacing: 2,
-            }}>{partner.code}</div>
-            <CopyButton text={partner.code} />
-          </div>
-        </div>
-
-        {/* CTA */}
-        <a
-          href={partner.href}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '13px', borderRadius: 10,
-            background: 'linear-gradient(135deg, #0F6FFF, #3CCBFF)',
-            color: '#fff', textDecoration: 'none',
-            fontFamily: "'Montserrat', sans-serif", fontWeight: 900,
-            fontSize: 12, letterSpacing: 2,
-            boxShadow: '0 4px 20px rgba(15,111,255,0.3)',
-            transition: 'opacity 0.15s',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.opacity = '.85' }}
-          onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
-        >
-          GET {partner.discount} — VISIT SITE →
-        </a>
-      </div>
-    </div>
-  )
-}
-
-export default function Partners() {
-  return (
-    <div style={{
-      minHeight: '100vh', background: '#08162E',
-      padding: '2rem 2.25rem',
-      fontFamily: "'Open Sans', sans-serif",
-    }}>
-      {/* Header */}
-      <div style={{ marginBottom: '1.75rem' }}>
-        <div style={{
-          fontFamily: "'Montserrat', sans-serif", fontWeight: 900,
-          fontSize: 22, color: '#F8FFFF', marginBottom: 4,
-        }}>Partners & Deals</div>
-        <p style={{ fontSize: 12.5, color: '#6E7B8F', maxWidth: 520 }}>
-          Exclusive discounts for TickShift Academy students. Use these tools to fund your trading journey.
-        </p>
-      </div>
-
-      {/* Banner */}
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(15,111,255,0.12), rgba(60,203,255,0.06))',
-        border: '1px solid rgba(60,203,255,0.2)',
-        borderRadius: 14, padding: '1.1rem 1.5rem',
-        marginBottom: '1.75rem',
-        display: 'flex', alignItems: 'center', gap: 14,
-      }}>
-        <span style={{ fontSize: 24 }}>⚡</span>
-        <div>
-          <div style={{
-            fontFamily: "'Montserrat', sans-serif", fontWeight: 700,
-            fontSize: 13, color: '#F8FFFF', marginBottom: 3,
-          }}>TickShift Student Exclusive Deals</div>
-          <div style={{ fontSize: 12, color: '#6E7B8F' }}>
-            These affiliate links support the community and give you discounts. Use the code at checkout.
-          </div>
-        </div>
-      </div>
-
-      {/* Partner cards */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))',
-        gap: '1.25rem',
-      }}>
-        {partners.map(p => <PartnerCard key={p.id} partner={p} />)}
-      </div>
-
-      {/* Bottom note */}
-      <div style={{
-        marginTop: '2rem', padding: '1rem 1.25rem',
-        background: 'rgba(13,31,60,0.5)',
-        border: '1px solid rgba(15,111,255,0.1)',
-        borderRadius: 10, fontSize: 11, color: '#6E7B8F', lineHeight: 1.7,
-      }}>
-        <strong style={{ color: '#C9D1DC' }}>Disclosure:</strong> These are affiliate partnerships.
-        When you use these links or codes, TickShift earns a commission at no extra cost to you —
-        which helps keep the Academy running. We only partner with platforms we actually use and trust.
-      </div>
+      )}
     </div>
   )
 }

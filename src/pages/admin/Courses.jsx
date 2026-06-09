@@ -1,295 +1,238 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../supabase'
 
-const css = `@keyframes spin { to { transform: rotate(360deg) } }`
+const EMPTY_COURSE  = { title: '', description: '', emoji: '', position: 0 }
+const EMPTY_LESSON  = { title: '', youtube_id: '', duration: '', position: 0, course_id: '' }
 
-const inputStyle = {
-  display: 'block', width: '100%', padding: '9px 12px',
-  background: 'rgba(5,14,34,0.8)', border: '1px solid rgba(60,203,255,0.15)',
-  borderRadius: 8, color: '#F8FFFF',
-  fontFamily: "'Open Sans', sans-serif", fontSize: 13, outline: 'none',
-  transition: 'border-color 0.15s', boxSizing: 'border-box',
-}
+export default function AdminCourses() {
+  const [courses, setCourses]         = useState([])
+  const [lessons, setLessons]         = useState([])
+  const [expanded, setExpanded]       = useState(null)
+  const [loading, setLoading]         = useState(true)
 
-function FormInput({ label, ...props }) {
-  return (
-    <div style={{ marginBottom: '0.85rem' }}>
-      <label style={{
-        display: 'block', fontSize: 10, fontWeight: 700,
-        letterSpacing: 1, textTransform: 'uppercase',
-        color: '#6E7B8F', marginBottom: 5,
-      }}>{label}</label>
-      <input
-        style={inputStyle}
-        onFocus={e => { e.target.style.borderColor = '#0F6FFF' }}
-        onBlur={e => { e.target.style.borderColor = 'rgba(60,203,255,0.15)' }}
-        {...props}
-      />
-    </div>
-  )
-}
+  // Course form
+  const [courseForm, setCourseForm]   = useState(null)
+  const [savingCourse, setSavingCourse] = useState(false)
+  const [courseErr, setCourseErr]     = useState('')
 
-function GradientBtn({ children, danger, sm, disabled, onClick, type = 'button' }) {
-  const base = {
-    padding: sm ? '6px 14px' : '10px 20px',
-    borderRadius: 8, border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
-    fontFamily: "'Montserrat', sans-serif", fontWeight: 700,
-    fontSize: sm ? 11 : 12, letterSpacing: 0.5,
-    opacity: disabled ? 0.5 : 1, transition: 'opacity 0.15s',
-  }
-  if (danger) return (
-    <button type={type} onClick={onClick} disabled={disabled} style={{
-      ...base, background: 'rgba(231,76,60,0.1)',
-      border: '1px solid rgba(231,76,60,0.3)', color: '#E74C3C',
-    }}>{children}</button>
-  )
-  return (
-    <button type={type} onClick={onClick} disabled={disabled} style={{
-      ...base, background: disabled ? 'rgba(13,95,224,0.4)' : 'linear-gradient(135deg, #0F6FFF, #3CCBFF)',
-      color: '#fff', boxShadow: disabled ? 'none' : '0 4px 14px rgba(15,111,255,0.3)',
-    }}>{children}</button>
-  )
-}
+  // Lesson form
+  const [lessonForm, setLessonForm]   = useState(null)
+  const [savingLesson, setSavingLesson] = useState(false)
+  const [lessonErr, setLessonErr]     = useState('')
 
-export default function ManageCourses() {
-  const [courses, setCourses]       = useState([])
-  const [loading, setLoading]       = useState(true)
-  const [showAddCourse, setShowAddCourse] = useState(false)
-  const [openLesson, setOpenLesson] = useState(null)
-  const [newCourse, setNewCourse]   = useState({ title: '', description: '', emoji: '' })
-  const [newLesson, setNewLesson]   = useState({ title: '', youtube_id: '', duration: '' })
-  const [saving, setSaving]         = useState(false)
-
-  async function load() {
-    const { data } = await supabase.from('courses').select('*, lessons(*)').order('position')
-    setCourses(data || [])
-    setLoading(false)
-  }
-  useEffect(() => { load() }, [])
-
-  async function addCourse() {
-    if (!newCourse.title.trim()) return
-    setSaving(true)
-    const { data, error } = await supabase
-      .from('courses')
-      .insert({
-        title:       newCourse.title.trim(),
-        description: newCourse.description.trim(),
-        emoji:       newCourse.emoji.trim() || '📈',
-        position:    courses.length,
-      })
-      .select().single()
-    if (!error) {
-      setCourses(prev => [...prev, { ...data, lessons: [] }])
-      setNewCourse({ title: '', description: '', emoji: '' })
-      setShowAddCourse(false)
+  useEffect(() => {
+    async function load() {
+      const [c, l] = await Promise.all([
+        supabase.from('courses').select('*').order('position'),
+        supabase.from('lessons').select('*').order('position'),
+      ])
+      setCourses(c.data || [])
+      setLessons(l.data || [])
+      setLoading(false)
     }
-    setSaving(false)
+    load()
+  }, [])
+
+  function courseLessons(cid) { return lessons.filter(l => l.course_id === cid) }
+
+  async function saveCourse(e) {
+    e.preventDefault()
+    if (!courseForm.title.trim()) { setCourseErr('Title is required.'); return }
+    setSavingCourse(true); setCourseErr('')
+    const { id, ...fields } = courseForm
+    let data, error
+    if (id) {
+      ({ data, error } = await supabase.from('courses').update(fields).eq('id', id).select().single())
+      if (!error) setCourses(prev => prev.map(c => c.id === id ? data : c))
+    } else {
+      ({ data, error } = await supabase.from('courses').insert(fields).select().single())
+      if (!error) setCourses(prev => [...prev, data])
+    }
+    if (error) setCourseErr(error.message)
+    else setCourseForm(null)
+    setSavingCourse(false)
   }
 
-  async function deleteCourse(courseId) {
+  async function deleteCourse(id) {
     if (!confirm('Delete this course and all its lessons?')) return
-    await supabase.from('courses').delete().eq('id', courseId)
-    setCourses(prev => prev.filter(c => c.id !== courseId))
+    await supabase.from('courses').delete().eq('id', id)
+    setCourses(prev => prev.filter(c => c.id !== id))
+    setLessons(prev => prev.filter(l => l.course_id !== id))
+    if (expanded === id) setExpanded(null)
   }
 
-  async function addLesson(courseId) {
-    if (!newLesson.title.trim() || !newLesson.youtube_id.trim()) return
-    setSaving(true)
-    const course = courses.find(c => c.id === courseId)
-    const youtubeId = newLesson.youtube_id
-      .replace('https://www.youtube.com/watch?v=', '')
-      .replace('https://youtu.be/', '')
-      .split('&')[0].split('?')[0]
-
-    const { data, error } = await supabase
-      .from('lessons')
-      .insert({
-        course_id: courseId,
-        title:     newLesson.title.trim(),
-        youtube_id: youtubeId,
-        duration:  newLesson.duration.trim() || '0:00',
-        position:  course?.lessons?.length || 0,
-      })
-      .select().single()
-
-    if (!error) {
-      setCourses(prev => prev.map(c =>
-        c.id === courseId ? { ...c, lessons: [...(c.lessons || []), data] } : c
-      ))
-      setNewLesson({ title: '', youtube_id: '', duration: '' })
-      setOpenLesson(null)
+  async function saveLesson(e) {
+    e.preventDefault()
+    if (!lessonForm.title.trim()) { setLessonErr('Title is required.'); return }
+    setSavingLesson(true); setLessonErr('')
+    const { id, ...fields } = lessonForm
+    let data, error
+    if (id) {
+      ({ data, error } = await supabase.from('lessons').update(fields).eq('id', id).select().single())
+      if (!error) setLessons(prev => prev.map(l => l.id === id ? data : l))
+    } else {
+      ({ data, error } = await supabase.from('lessons').insert(fields).select().single())
+      if (!error) setLessons(prev => [...prev, data])
     }
-    setSaving(false)
+    if (error) setLessonErr(error.message)
+    else setLessonForm(null)
+    setSavingLesson(false)
   }
 
-  async function deleteLesson(courseId, lessonId) {
-    await supabase.from('lessons').delete().eq('id', lessonId)
-    setCourses(prev => prev.map(c =>
-      c.id === courseId ? { ...c, lessons: c.lessons.filter(l => l.id !== lessonId) } : c
-    ))
+  async function deleteLesson(id) {
+    await supabase.from('lessons').delete().eq('id', id)
+    setLessons(prev => prev.filter(l => l.id !== id))
   }
 
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#08162E' }}>
-      <style>{css}</style>
-      <div style={{ width: 38, height: 38, border: '3px solid rgba(15,111,255,0.2)', borderTopColor: '#0F6FFF', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-    </div>
-  )
-
-  const gradients = [
-    'linear-gradient(135deg, #0F6FFF, #3CCBFF)',
-    'linear-gradient(135deg, #3CCBFF, #0D5FE0)',
-    'linear-gradient(135deg, #0D1F3C, #0F6FFF)',
-    'linear-gradient(135deg, #1a3a6e, #3CCBFF)',
-  ]
+  const inputStyle = { display: 'block', width: '100%', padding: '9px 11px', background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 'var(--radius-sm)', color: 'var(--white)', fontFamily: 'var(--font-body)', fontSize: 13, outline: 'none' }
+  const labelStyle = { display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 5 }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#08162E', padding: '2rem 2.25rem', fontFamily: "'Open Sans', sans-serif" }}>
-      <style>{css}</style>
-
-      {/* Header */}
+    <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem' }}>
         <div>
-          <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 24, color: '#fff', marginBottom: 4 }}>
-            Courses
-          </div>
-          <p style={{ fontSize: 13, color: '#6E7B8F', margin: 0 }}>
-            {courses.length} course{courses.length !== 1 ? 's' : ''} · {courses.reduce((a, c) => a + (c.lessons?.length || 0), 0)} total lessons
-          </p>
+          <h1 style={{ fontFamily: 'var(--font-head)', fontWeight: 900, fontSize: 28, color: 'var(--white)', marginBottom: 4 }}>Courses</h1>
+          <p style={{ fontSize: 13, color: 'var(--muted)' }}>Build and manage your curriculum.</p>
         </div>
-        <GradientBtn onClick={() => setShowAddCourse(true)}>+ Add Course</GradientBtn>
+        <button onClick={() => { setCourseForm({ ...EMPTY_COURSE }); setCourseErr('') }}
+          style={{ padding: '10px 18px', background: 'var(--blue)', border: 'none', borderRadius: 'var(--radius-sm)', color: '#fff', cursor: 'pointer', fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 12 }}>
+          + New Course
+        </button>
       </div>
 
-      {/* Add Course Form */}
-      {showAddCourse && (
-        <div style={{
-          background: 'rgba(11,22,40,0.95)', border: '1px solid rgba(60,203,255,0.2)',
-          borderRadius: 14, padding: '1.5rem', marginBottom: '1.25rem',
-        }}>
-          <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 13, color: '#3CCBFF', marginBottom: '1rem', letterSpacing: 0.5 }}>
-            New Course
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem' }}>
-            <FormInput label="Course Title" placeholder="e.g. The OTE Model" value={newCourse.title} onChange={e => setNewCourse(p => ({ ...p, title: e.target.value }))} />
-            <FormInput label="Emoji" placeholder="📈" style={{ width: 70 }} value={newCourse.emoji} onChange={e => setNewCourse(p => ({ ...p, emoji: e.target.value }))} />
-          </div>
-          <FormInput label="Description" placeholder="Short description shown on course card" value={newCourse.description} onChange={e => setNewCourse(p => ({ ...p, description: e.target.value }))} />
-          <div style={{ display: 'flex', gap: 8 }}>
-            <GradientBtn onClick={addCourse} disabled={saving}>{saving ? 'Saving...' : 'Save Course'}</GradientBtn>
-            <GradientBtn danger onClick={() => setShowAddCourse(false)}>Cancel</GradientBtn>
-          </div>
-        </div>
-      )}
-
-      {courses.length === 0 && !showAddCourse && (
-        <div style={{
-          background: 'rgba(15,111,255,0.04)', border: '1px solid rgba(15,111,255,0.12)',
-          borderRadius: 12, padding: '1.5rem', fontSize: 13, color: '#6E7B8F',
-        }}>
-          No courses yet. Click "+ Add Course" to create your first one.
-        </div>
-      )}
-
-      {/* Course list */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-        {courses.map((course, ci) => (
-          <div key={course.id} style={{
-            background: 'rgba(11,22,40,0.9)', border: '1px solid rgba(15,111,255,0.14)',
-            borderRadius: 14, overflow: 'hidden',
-          }}>
-            {/* Course header bar */}
-            <div style={{ height: 4, background: gradients[ci % gradients.length] }} />
-
-            <div style={{ padding: '1.25rem 1.4rem' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12, gap: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{
-                    width: 44, height: 44, borderRadius: 10, flexShrink: 0,
-                    background: gradients[ci % gradients.length],
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 20,
-                  }}>{course.emoji || '📈'}</div>
-                  <div>
-                    <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 15, color: '#F8FFFF', marginBottom: 3 }}>
-                      {course.title}
-                    </div>
-                    {course.description && (
-                      <div style={{ fontSize: 12, color: '#6E7B8F' }}>{course.description}</div>
-                    )}
-                    <div style={{ fontSize: 10.5, color: '#4A6FA5', marginTop: 4 }}>
-                      {course.lessons?.length || 0} lesson{course.lessons?.length !== 1 ? 's' : ''}
-                    </div>
-                  </div>
+      {/* Course form modal */}
+      {courseForm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.5rem', width: '100%', maxWidth: 480 }}>
+            <h2 style={{ fontFamily: 'var(--font-head)', fontWeight: 800, fontSize: 17, color: 'var(--white)', marginBottom: '1.25rem' }}>
+              {courseForm.id ? 'Edit Course' : 'New Course'}
+            </h2>
+            <form onSubmit={saveCourse}>
+              <div style={{ marginBottom: '0.9rem' }}>
+                <label style={labelStyle}>Title *</label>
+                <input value={courseForm.title} onChange={e => setCourseForm(p => ({ ...p, title: e.target.value }))} style={inputStyle} placeholder="e.g. Futures Foundations" onFocus={e => { e.target.style.borderColor = 'var(--blue)' }} onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }} />
+              </div>
+              <div style={{ marginBottom: '0.9rem' }}>
+                <label style={labelStyle}>Description</label>
+                <textarea value={courseForm.description || ''} onChange={e => setCourseForm(p => ({ ...p, description: e.target.value }))} rows={3} style={{ ...inputStyle, resize: 'vertical' }} placeholder="Brief course overview" onFocus={e => { e.target.style.borderColor = 'var(--blue)' }} onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.9rem' }}>
+                <div>
+                  <label style={labelStyle}>Emoji</label>
+                  <input value={courseForm.emoji || ''} onChange={e => setCourseForm(p => ({ ...p, emoji: e.target.value }))} style={inputStyle} placeholder="📈" />
                 </div>
-                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                  <GradientBtn sm onClick={() => setOpenLesson(openLesson === course.id ? null : course.id)}>
-                    + Add Lesson
-                  </GradientBtn>
-                  <GradientBtn sm danger onClick={() => deleteCourse(course.id)}>Delete</GradientBtn>
+                <div>
+                  <label style={labelStyle}>Position</label>
+                  <input type="number" value={courseForm.position || 0} onChange={e => setCourseForm(p => ({ ...p, position: parseInt(e.target.value) || 0 }))} style={inputStyle} onFocus={e => { e.target.style.borderColor = 'var(--blue)' }} onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }} />
                 </div>
               </div>
-
-              {/* Add Lesson Form */}
-              {openLesson === course.id && (
-                <div style={{
-                  background: 'rgba(5,14,34,0.7)', border: '1px solid rgba(60,203,255,0.15)',
-                  borderRadius: 10, padding: '1rem', marginBottom: '0.75rem',
-                }}>
-                  <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 12, color: '#3CCBFF', marginBottom: '0.75rem', letterSpacing: 0.5 }}>
-                    New Lesson
-                  </div>
-                  <FormInput label="Lesson Title" placeholder="e.g. Introduction to OTE" value={newLesson.title} onChange={e => setNewLesson(p => ({ ...p, title: e.target.value }))} />
-                  <FormInput label="YouTube Video ID or URL" placeholder="e.g. dQw4w9WgXcQ or full URL" value={newLesson.youtube_id} onChange={e => setNewLesson(p => ({ ...p, youtube_id: e.target.value }))} />
-                  <FormInput label="Duration (optional)" placeholder="e.g. 12:34" value={newLesson.duration} onChange={e => setNewLesson(p => ({ ...p, duration: e.target.value }))} />
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <GradientBtn sm onClick={() => addLesson(course.id)} disabled={saving}>
-                      {saving ? 'Saving...' : 'Save Lesson'}
-                    </GradientBtn>
-                    <GradientBtn sm danger onClick={() => setOpenLesson(null)}>Cancel</GradientBtn>
-                  </div>
-                </div>
-              )}
-
-              {/* Lesson list */}
-              {course.lessons?.length === 0 ? (
-                <div style={{ fontSize: 12, color: '#4A6FA5', padding: '6px 0' }}>No lessons yet — add one above.</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {[...(course.lessons || [])].sort((a, b) => a.position - b.position).map((lesson, li) => (
-                    <div key={lesson.id} style={{
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '9px 12px', borderRadius: 8,
-                      background: 'rgba(5,14,34,0.5)',
-                      border: '1px solid rgba(15,111,255,0.08)',
-                    }}>
-                      <div style={{
-                        width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                        background: 'rgba(15,111,255,0.15)',
-                        border: '1px solid rgba(60,203,255,0.25)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 10, fontWeight: 700, color: '#3CCBFF',
-                      }}>{li + 1}</div>
-                      <div style={{ flex: 1, fontSize: 13, color: '#E2EAF4', fontWeight: 500 }}>{lesson.title}</div>
-                      <div style={{ fontSize: 11, color: '#4A6FA5', marginRight: 6 }}>{lesson.duration}</div>
-                      <button
-                        onClick={() => deleteLesson(course.id, lesson.id)}
-                        style={{
-                          background: 'transparent', border: 'none', cursor: 'pointer',
-                          color: '#E74C3C', fontSize: 13, padding: '2px 6px',
-                          opacity: 0.6, transition: 'opacity 0.15s',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.opacity = '1' }}
-                        onMouseLeave={e => { e.currentTarget.style.opacity = '0.6' }}
-                      >✕</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+              {courseErr && <div style={{ padding: '9px 12px', borderRadius: 7, marginBottom: '0.9rem', background: 'rgba(231,76,60,0.08)', border: '1px solid rgba(231,76,60,0.3)', color: 'var(--danger)', fontSize: 13 }}>{courseErr}</div>}
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => setCourseForm(null)} style={{ padding: '9px 16px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 12 }}>Cancel</button>
+                <button type="submit" disabled={savingCourse} style={{ padding: '9px 20px', background: 'var(--blue)', border: 'none', borderRadius: 'var(--radius-sm)', color: '#fff', cursor: savingCourse ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 12, opacity: savingCourse ? 0.6 : 1 }}>{savingCourse ? 'Saving…' : 'Save Course'}</button>
+              </div>
+            </form>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
+
+      {/* Lesson form modal */}
+      {lessonForm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.5rem', width: '100%', maxWidth: 480 }}>
+            <h2 style={{ fontFamily: 'var(--font-head)', fontWeight: 800, fontSize: 17, color: 'var(--white)', marginBottom: '1.25rem' }}>
+              {lessonForm.id ? 'Edit Lesson' : 'New Lesson'}
+            </h2>
+            <form onSubmit={saveLesson}>
+              <div style={{ marginBottom: '0.9rem' }}>
+                <label style={labelStyle}>Title *</label>
+                <input value={lessonForm.title} onChange={e => setLessonForm(p => ({ ...p, title: e.target.value }))} style={inputStyle} placeholder="e.g. Intro to Order Flow" onFocus={e => { e.target.style.borderColor = 'var(--blue)' }} onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }} />
+              </div>
+              <div style={{ marginBottom: '0.9rem' }}>
+                <label style={labelStyle}>YouTube ID</label>
+                <input value={lessonForm.youtube_id || ''} onChange={e => setLessonForm(p => ({ ...p, youtube_id: e.target.value }))} style={inputStyle} placeholder="dQw4w9WgXcQ" onFocus={e => { e.target.style.borderColor = 'var(--blue)' }} onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.9rem' }}>
+                <div>
+                  <label style={labelStyle}>Duration</label>
+                  <input value={lessonForm.duration || ''} onChange={e => setLessonForm(p => ({ ...p, duration: e.target.value }))} style={inputStyle} placeholder="12:45" onFocus={e => { e.target.style.borderColor = 'var(--blue)' }} onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Position</label>
+                  <input type="number" value={lessonForm.position || 0} onChange={e => setLessonForm(p => ({ ...p, position: parseInt(e.target.value) || 0 }))} style={inputStyle} onFocus={e => { e.target.style.borderColor = 'var(--blue)' }} onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }} />
+                </div>
+              </div>
+              {lessonErr && <div style={{ padding: '9px 12px', borderRadius: 7, marginBottom: '0.9rem', background: 'rgba(231,76,60,0.08)', border: '1px solid rgba(231,76,60,0.3)', color: 'var(--danger)', fontSize: 13 }}>{lessonErr}</div>}
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => setLessonForm(null)} style={{ padding: '9px 16px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 12 }}>Cancel</button>
+                <button type="submit" disabled={savingLesson} style={{ padding: '9px 20px', background: 'var(--blue)', border: 'none', borderRadius: 'var(--radius-sm)', color: '#fff', cursor: savingLesson ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 12, opacity: savingLesson ? 0.6 : 1 }}>{savingLesson ? 'Saving…' : 'Save Lesson'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
+          <div style={{ width: 28, height: 28, border: '2px solid rgba(15,111,255,0.18)', borderTopColor: 'var(--blue)', borderRadius: '50%', animation: 'spin 0.75s linear infinite' }} />
+        </div>
+      ) : courses.length === 0 ? (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '2rem', textAlign: 'center', fontSize: 13, color: 'var(--muted)' }}>
+          No courses yet. Click "+ New Course" to add one.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {courses.map(course => {
+            const cl = courseLessons(course.id)
+            const open = expanded === course.id
+            return (
+              <div key={course.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '1rem 1.25rem', cursor: 'pointer' }}
+                  onClick={() => setExpanded(open ? null : course.id)}>
+                  <span style={{ fontSize: 20 }}>{course.emoji || '📈'}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 14, color: 'var(--white)' }}>{course.title}</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>{cl.length} lesson{cl.length !== 1 ? 's' : ''}</div>
+                  </div>
+                  <button onClick={e => { e.stopPropagation(); setCourseForm({ ...course }); setCourseErr('') }}
+                    style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--silver)', cursor: 'pointer', padding: '5px 11px', fontSize: 11, fontFamily: 'var(--font-head)', fontWeight: 700 }}>Edit</button>
+                  <button onClick={e => { e.stopPropagation(); deleteCourse(course.id) }}
+                    style={{ background: 'transparent', border: '1px solid rgba(231,76,60,0.3)', borderRadius: 'var(--radius-sm)', color: 'var(--danger)', cursor: 'pointer', padding: '5px 11px', fontSize: 11, fontFamily: 'var(--font-head)', fontWeight: 700 }}>Delete</button>
+                  <span style={{ color: 'var(--muted)', fontSize: 13, userSelect: 'none' }}>{open ? '▲' : '▼'}</span>
+                </div>
+
+                {open && (
+                  <div style={{ borderTop: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--border)' }}>
+                      <button onClick={() => { setLessonForm({ ...EMPTY_LESSON, course_id: course.id }); setLessonErr('') }}
+                        style={{ padding: '7px 14px', background: 'var(--blue-dim)', border: '1px solid rgba(15,111,255,0.3)', borderRadius: 'var(--radius-sm)', color: 'var(--cyan)', cursor: 'pointer', fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 11 }}>
+                        + Add Lesson
+                      </button>
+                    </div>
+                    {cl.length === 0 ? (
+                      <div style={{ padding: '1rem 1.25rem', fontSize: 12, color: 'var(--muted)' }}>No lessons yet. Add one above.</div>
+                    ) : (
+                      cl.map((lesson, i) => (
+                        <div key={lesson.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0.75rem 1.25rem', borderBottom: i < cl.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                          <div style={{ width: 22, height: 22, borderRadius: '50%', border: '1.5px solid var(--muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--muted)', flexShrink: 0 }}>{i + 1}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, color: 'var(--silver)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{lesson.title}</div>
+                            {lesson.duration && <div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{lesson.duration}</div>}
+                          </div>
+                          <button onClick={() => { setLessonForm({ ...lesson }); setLessonErr('') }}
+                            style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--silver)', cursor: 'pointer', padding: '4px 10px', fontSize: 10, fontFamily: 'var(--font-head)', fontWeight: 700 }}>Edit</button>
+                          <button onClick={() => deleteLesson(lesson.id)}
+                            style={{ background: 'transparent', border: '1px solid rgba(231,76,60,0.25)', borderRadius: 'var(--radius-sm)', color: 'var(--danger)', cursor: 'pointer', padding: '4px 10px', fontSize: 10, fontFamily: 'var(--font-head)', fontWeight: 700 }}>Del</button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

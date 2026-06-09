@@ -2,200 +2,121 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 
-const css = `@keyframes spin { to { transform: rotate(360deg) } }`
-
-function StatCard({ label, value, sub, accent, icon }) {
+function StatCard({ label, value, accent = 'var(--blue)', sub }) {
   return (
-    <div style={{
-      background: 'linear-gradient(135deg, rgba(13,31,60,0.9), rgba(8,22,46,0.95))',
-      border: '1px solid rgba(15,111,255,0.16)', borderRadius: 14,
-      padding: '1.25rem 1.35rem', position: 'relative', overflow: 'hidden',
-    }}>
-      <div style={{
-        position: 'absolute', top: -20, right: -20,
-        width: 80, height: 80, borderRadius: '50%',
-        background: `radial-gradient(circle, ${accent}22 0%, transparent 70%)`,
-        pointerEvents: 'none',
-      }} />
-      <div style={{ fontSize: 22, marginBottom: 8 }}>{icon}</div>
-      <div style={{
-        fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: '#6E7B8F',
-        textTransform: 'uppercase', marginBottom: 6,
-      }}>{label}</div>
-      <div style={{
-        fontFamily: "'Montserrat', sans-serif", fontWeight: 900,
-        fontSize: 30, color: accent, lineHeight: 1,
-      }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: '#6E7B8F', marginTop: 5 }}>{sub}</div>}
-    </div>
-  )
-}
-
-function ProgressRow({ student, pct, ini }) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 12,
-      padding: '0.85rem 0',
-      borderBottom: '1px solid rgba(15,111,255,0.08)',
-    }}>
-      <div style={{
-        width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
-        background: 'linear-gradient(135deg, #0F6FFF, #3CCBFF)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 11, fontWeight: 700, color: '#fff',
-      }}>{ini(student.full_name)}</div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontSize: 13, fontWeight: 600, color: '#F8FFFF',
-          fontFamily: "'Montserrat', sans-serif", marginBottom: 6,
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        }}>{student.full_name || student.email}</div>
-        <div style={{ height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
-          <div style={{
-            height: '100%', borderRadius: 3,
-            background: pct === 100
-              ? 'linear-gradient(90deg, #2ECC71, #27AE60)'
-              : 'linear-gradient(90deg, #0F6FFF, #3CCBFF)',
-            width: `${pct}%`, transition: 'width 0.6s ease',
-          }} />
-        </div>
-      </div>
-      <div style={{
-        fontFamily: "'Montserrat', sans-serif", fontWeight: 700,
-        fontSize: 13, color: pct === 100 ? '#2ECC71' : '#3CCBFF',
-        minWidth: 42, textAlign: 'right',
-      }}>{pct}%</div>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.25rem 1.4rem' }}>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 8 }}>{label}</div>
+      <div style={{ fontFamily: 'var(--font-head)', fontWeight: 900, fontSize: 32, color: accent, lineHeight: 1, marginBottom: sub ? 6 : 0 }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{sub}</div>}
     </div>
   )
 }
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
-  const [stats, setStats]       = useState({ students: 0, courses: 0, lessons: 0, submissions: 0 })
-  const [students, setStudents] = useState([])
-  const [courses, setCourses]   = useState([])
-  const [assignments, setAssignments] = useState([])
-  const [allProgress, setAllProgress] = useState([])
-  const [loading, setLoading]   = useState(true)
+  const [stats, setStats]     = useState(null)
+  const [recent, setRecent]   = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
-      const [st, co, as, pr, su] = await Promise.all([
-        supabase.from('profiles').select('*').eq('role', 'student'),
-        supabase.from('courses').select('*, lessons(id)').order('position'),
-        supabase.from('assignments').select('*, courses(title)').order('created_at', { ascending: false }),
-        supabase.from('lesson_progress').select('user_id, lesson_id'),
-        supabase.from('submissions').select('id'),
+      const [students, courses, lessons, progress, assignments, submissions] = await Promise.all([
+        supabase.from('profiles').select('id', { count: 'exact', head: true }),
+        supabase.from('courses').select('id', { count: 'exact', head: true }),
+        supabase.from('lessons').select('id', { count: 'exact', head: true }),
+        supabase.from('lesson_progress').select('id', { count: 'exact', head: true }),
+        supabase.from('assignments').select('id', { count: 'exact', head: true }),
+        supabase.from('submissions').select('id', { count: 'exact', head: true }),
       ])
-      const studentList = st.data || []
-      const courseList  = co.data || []
-      setStudents(studentList)
-      setCourses(courseList)
-      setAssignments(as.data || [])
-      setAllProgress(pr.data || [])
       setStats({
-        students:    studentList.length,
-        courses:     courseList.length,
-        lessons:     pr.data?.length || 0,
-        submissions: su.data?.length || 0,
+        students: students.count ?? 0,
+        courses: courses.count ?? 0,
+        lessons: lessons.count ?? 0,
+        progress: progress.count ?? 0,
+        assignments: assignments.count ?? 0,
+        submissions: submissions.count ?? 0,
       })
+
+      const { data: recentStudents } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, created_at')
+        .order('created_at', { ascending: false })
+        .limit(5)
+      setRecent(recentStudents || [])
       setLoading(false)
     }
     load()
   }, [])
 
-  function studentPct(studentId) {
-    const total = courses.reduce((a, c) => a + (c.lessons?.length || 0), 0)
-    if (!total) return 0
-    return Math.round((allProgress.filter(p => p.user_id === studentId).length / total) * 100)
-  }
-
-  const ini = name => name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?'
-
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#08162E' }}>
-      <style>{css}</style>
-      <div style={{ width: 38, height: 38, border: '3px solid rgba(15,111,255,0.2)', borderTopColor: '#0F6FFF', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-    </div>
-  )
-
   return (
-    <div style={{ minHeight: '100vh', background: '#08162E', padding: '2rem 2.25rem', fontFamily: "'Open Sans', sans-serif" }}>
-      <style>{css}</style>
-
-      {/* Header */}
+    <div>
       <div style={{ marginBottom: '1.75rem' }}>
-        <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 24, color: '#fff', marginBottom: 4 }}>
-          Mentor Dashboard
-        </div>
-        <p style={{ fontSize: 13, color: '#6E7B8F', margin: 0 }}>Overview of your academy's activity.</p>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: 'var(--cyan)', textTransform: 'uppercase', marginBottom: 4 }}>Admin</div>
+        <h1 style={{ fontFamily: 'var(--font-head)', fontWeight: 900, fontSize: 28, color: 'var(--white)', marginBottom: 4 }}>Dashboard</h1>
+        <p style={{ fontSize: 13, color: 'var(--muted)' }}>Overview of TickShift Academy.</p>
       </div>
 
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.75rem' }}>
-        <StatCard label="Total Students"   value={stats.students}    sub="Enrolled profiles"     accent="#3CCBFF" icon="👥" />
-        <StatCard label="Courses Live"     value={stats.courses}     sub="Published content"     accent="#0F6FFF" icon="📚" />
-        <StatCard label="Lessons Watched"  value={stats.lessons}     sub="All-time completions"  accent="#2ECC71" icon="▶" />
-        <StatCard label="Submissions"      value={stats.submissions} sub="Homework submitted"     accent="#F39C12" icon="📝" />
+      {loading ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+          {[0,1,2,3,4,5].map(i => (
+            <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', height: 100 }} />
+          ))}
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+          <StatCard label="Students" value={stats.students} accent="var(--blue)" />
+          <StatCard label="Courses" value={stats.courses} accent="var(--cyan)" />
+          <StatCard label="Lessons" value={stats.lessons} accent="var(--silver)" />
+          <StatCard label="Completions" value={stats.progress} accent="var(--success)" />
+          <StatCard label="Assignments" value={stats.assignments} accent="var(--blue)" />
+          <StatCard label="Submissions" value={stats.submissions} accent="var(--cyan)" />
+        </div>
+      )}
+
+      {/* Quick nav */}
+      <div style={{ marginBottom: '2rem' }}>
+        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 2, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: '1rem' }}>Quick Actions</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+          {[
+            { label: 'Manage Courses', sub: 'Add lessons & content', path: '/admin/courses', icon: '📚' },
+            { label: 'Assignments', sub: 'Create & review work', path: '/admin/assignments', icon: '📝' },
+            { label: 'Students', sub: 'Invite & manage access', path: '/admin/students', icon: '👥' },
+          ].map(q => (
+            <div key={q.path} onClick={() => navigate(q.path)}
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1rem 1.1rem', cursor: 'pointer', transition: 'border-color 0.15s, transform 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(15,111,255,0.4)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateY(0)' }}
+            >
+              <div style={{ fontSize: 22, marginBottom: 8 }}>{q.icon}</div>
+              <div style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 13, color: 'var(--white)', marginBottom: 3 }}>{q.label}</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)' }}>{q.sub}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-
-        {/* Student Progress */}
-        <div style={{ background: 'rgba(11,22,40,0.9)', border: '1px solid rgba(15,111,255,0.12)', borderRadius: 14, padding: '1.25rem 1.4rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 2, color: '#6E7B8F', textTransform: 'uppercase' }}>Student Progress</div>
-            <button
-              onClick={() => navigate('/admin/students')}
-              style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 11, color: '#3CCBFF', fontWeight: 600 }}
-            >View all →</button>
-          </div>
-
-          {students.length === 0 ? (
-            <div style={{ fontSize: 13, color: '#6E7B8F', padding: '0.5rem 0' }}>No students yet.</div>
-          ) : (
-            students.slice(0, 6).map(s => (
-              <ProgressRow key={s.id} student={s} pct={studentPct(s.id)} ini={ini} />
-            ))
-          )}
+      {/* Recent students */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 2, color: 'var(--muted)', textTransform: 'uppercase' }}>Recent Students</div>
+          <button onClick={() => navigate('/admin/students')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--cyan)', fontWeight: 600, fontFamily: 'var(--font-head)' }}>View all →</button>
         </div>
-
-        {/* Active Assignments */}
-        <div style={{ background: 'rgba(11,22,40,0.9)', border: '1px solid rgba(15,111,255,0.12)', borderRadius: 14, padding: '1.25rem 1.4rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 2, color: '#6E7B8F', textTransform: 'uppercase' }}>Active Assignments</div>
-            <button
-              onClick={() => navigate('/admin/assignments')}
-              style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 11, color: '#3CCBFF', fontWeight: 600 }}
-            >Manage →</button>
-          </div>
-
-          {assignments.length === 0 ? (
-            <div style={{ fontSize: 13, color: '#6E7B8F', padding: '0.5rem 0' }}>No assignments created yet.</div>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+          {recent.length === 0 ? (
+            <div style={{ padding: '1.5rem', fontSize: 13, color: 'var(--muted)' }}>No students yet.</div>
           ) : (
-            assignments.slice(0, 6).map((a, i, arr) => (
-              <div key={a.id} style={{
-                padding: '0.85rem 0',
-                borderBottom: i < arr.length - 1 ? '1px solid rgba(15,111,255,0.08)' : 'none',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                  <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 13, color: '#F8FFFF', marginBottom: 5 }}>
-                    {a.title}
-                  </div>
-                  {a.due_date && (
-                    <span style={{ fontSize: 10.5, color: '#6E7B8F', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                      Due {a.due_date}
-                    </span>
-                  )}
+            recent.map((s, i) => (
+              <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 1.25rem', borderBottom: i < recent.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--blue-dim)', border: '1px solid rgba(15,111,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 13, color: 'var(--blue)', flexShrink: 0 }}>
+                  {(s.full_name || s.email || '?')[0].toUpperCase()}
                 </div>
-                {a.courses && (
-                  <span style={{
-                    fontSize: 9.5, fontWeight: 700,
-                    background: 'rgba(15,111,255,0.12)',
-                    border: '1px solid rgba(60,203,255,0.2)',
-                    color: '#3CCBFF', borderRadius: 100, padding: '2px 9px',
-                  }}>{a.courses.title}</span>
-                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--white)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.full_name || '—'}</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.email}</div>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>
+                  {new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </div>
               </div>
             ))
           )}

@@ -3,344 +3,151 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabase'
 import { useAuth } from '../../context/AuthContext'
 
-// ── Skeleton for lesson sidebar ───────────────────────────────────────────────
-function LessonSkeleton() {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', marginBottom: 4 }}>
-      <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', flexShrink: 0 }} />
-      <div style={{ flex: 1 }}>
-        <div style={{ height: 11, borderRadius: 4, background: 'rgba(255,255,255,0.06)', marginBottom: 5, width: '80%', animation: 'pulse 1.4s ease-in-out infinite' }} />
-        <div style={{ height: 9, borderRadius: 3, background: 'rgba(255,255,255,0.04)', width: '50%', animation: 'pulse 1.4s ease-in-out infinite' }} />
-      </div>
-    </div>
-  )
-}
-
 export default function CoursePlayer() {
   const { courseId } = useParams()
   const { profile, hasAccess, membershipChecked } = useAuth()
   const navigate = useNavigate()
+
   const [course, setCourse]           = useState(null)
   const [lessons, setLessons]         = useState([])
   const [activeLesson, setActiveLesson] = useState(null)
   const [completedIds, setCompletedIds] = useState([])
   const [courseReady, setCourseReady] = useState(false)
   const [lessonsReady, setLessonsReady] = useState(false)
-  const [markingComplete, setMarkingComplete] = useState(false)
+  const [marking, setMarking]         = useState(false)
 
   useEffect(() => {
     if (!profile) return
-
     let cancelled = false
-
-    async function loadCourse() {
-      const { data } = await supabase.from('courses').select('*').eq('id', courseId).single()
-      if (!cancelled) { setCourse(data ?? null); setCourseReady(true) }
-    }
-
-    async function loadLessons() {
-      const [l, p] = await Promise.all([
+    async function load() {
+      const [c, l, p] = await Promise.all([
+        supabase.from('courses').select('*').eq('id', courseId).single(),
         supabase.from('lessons').select('*').eq('course_id', courseId).order('position'),
         supabase.from('lesson_progress').select('lesson_id').eq('user_id', profile.id),
       ])
       if (cancelled) return
-      const lessonList = l.data || []
-      setLessons(lessonList)
-      setActiveLesson(lessonList[0] || null)
+      setCourse(c.data ?? null)
+      setCourseReady(true)
+      const list = l.data || []
+      setLessons(list)
+      setActiveLesson(list[0] || null)
       setCompletedIds(p.data?.map(r => r.lesson_id) || [])
       setLessonsReady(true)
     }
-
-    loadCourse()
-    loadLessons()
-
+    load()
     return () => { cancelled = true }
   }, [courseId, profile])
 
   async function markComplete(lessonId) {
-    if (completedIds.includes(lessonId) || markingComplete) return
-    setMarkingComplete(true)
+    if (completedIds.includes(lessonId) || marking) return
+    setMarking(true)
     await supabase.from('lesson_progress').insert({ user_id: profile.id, lesson_id: lessonId })
     setCompletedIds(prev => [...prev, lessonId])
-    setMarkingComplete(false)
+    setMarking(false)
     const idx = lessons.findIndex(l => l.id === lessonId)
-    if (idx < lessons.length - 1) {
-      setTimeout(() => setActiveLesson(lessons[idx + 1]), 400)
-    }
+    if (idx < lessons.length - 1) setTimeout(() => setActiveLesson(lessons[idx + 1]), 350)
   }
 
-  async function unmarkComplete(lessonId) {
-    await supabase.from('lesson_progress')
-      .delete()
-      .eq('user_id', profile.id)
-      .eq('lesson_id', lessonId)
+  async function unmark(lessonId) {
+    await supabase.from('lesson_progress').delete().eq('user_id', profile.id).eq('lesson_id', lessonId)
     setCompletedIds(prev => prev.filter(id => id !== lessonId))
   }
 
   if (!hasAccess && membershipChecked) return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', minHeight: '100vh', background: '#08162E',
-      padding: '2rem', textAlign: 'center', gap: 16,
-      fontFamily: "'Montserrat', sans-serif",
-    }}>
-      <div style={{ fontSize: 40 }}>🔒</div>
-      <div style={{ fontWeight: 900, fontSize: 20, color: '#fff' }}>Membership Required</div>
-      <p style={{ color: '#6E7B8F', fontSize: 13, maxWidth: 380, lineHeight: 1.6, margin: 0 }}>
-        Access to courses is available to active TickShift members. Purchase via Whop to unlock all content.
-      </p>
-      <a href="https://whop.com/tikcshift/tickshift-premium-access/" target="_blank" rel="noopener noreferrer" style={{
-        padding: '0.75rem 2rem', marginTop: 8,
-        background: 'linear-gradient(135deg, #0F6FFF, #3CCBFF)',
-        borderRadius: 10, color: '#fff', fontFamily: "'Montserrat', sans-serif",
-        fontWeight: 700, fontSize: 13, letterSpacing: 1, textDecoration: 'none',
-        textTransform: 'uppercase',
-      }}>Get Access on Whop</a>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 400, textAlign: 'center', gap: 16 }}>
+      <div style={{ fontSize: 42 }}>🔒</div>
+      <h2 style={{ fontFamily: 'var(--font-head)', fontWeight: 900, fontSize: 22 }}>Membership Required</h2>
+      <p style={{ fontSize: 14, color: 'var(--muted)', maxWidth: 380, lineHeight: 1.7 }}>Access to courses requires an active TickShift membership.</p>
+      <a href="https://whop.com/tickshift" target="_blank" rel="noopener noreferrer" style={{ padding: '0.75rem 2rem', background: 'var(--blue)', borderRadius: 'var(--radius-sm)', color: '#fff', fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 13, letterSpacing: 1 }}>
+        Get Access on Whop
+      </a>
     </div>
   )
 
   if (!courseReady) return (
-    <div style={{ minHeight: '100vh', background: '#08162E', fontFamily: "'Open Sans', sans-serif" }}>
-      <style>{`
-        @keyframes spin  { to { transform: rotate(360deg) } }
-        @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }
-      `}</style>
-      <div style={{
-        background: 'rgba(11,22,40,0.95)', borderBottom: '1px solid rgba(15,111,255,0.12)',
-        padding: '0.85rem 1.5rem', display: 'flex', alignItems: 'center', gap: 14,
-      }}>
-        <button
-          onClick={() => navigate('/courses')}
-          style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#3CCBFF', fontSize: 12, fontWeight: 600, fontFamily: "'Open Sans', sans-serif" }}
-        >← Back</button>
-        <div style={{ height: 14, width: 160, borderRadius: 4, background: 'rgba(255,255,255,0.06)', animation: 'pulse 1.4s ease-in-out infinite' }} />
-      </div>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
+      <div style={{ width: 32, height: 32, border: '2.5px solid rgba(15,111,255,0.18)', borderTopColor: 'var(--blue)', borderRadius: '50%', animation: 'spin 0.75s linear infinite' }} />
     </div>
   )
 
-  if (!course) return (
-    <div style={{ padding: '2rem', color: '#6E7B8F', fontFamily: "'Open Sans', sans-serif" }}>
-      Course not found.
-    </div>
-  )
+  if (!course) return <div style={{ color: 'var(--muted)', padding: '2rem', fontSize: 14 }}>Course not found.</div>
 
-  const isDone    = activeLesson && completedIds.includes(activeLesson.id)
-  const pct       = lessonsReady && lessons.length
+  const isDone = activeLesson && completedIds.includes(activeLesson.id)
+  const pct    = lessonsReady && lessons.length
     ? Math.round((lessons.filter(l => completedIds.includes(l.id)).length / lessons.length) * 100)
     : 0
-  const activeIdx = lessons.findIndex(l => l.id === activeLesson?.id)
 
   return (
-    <div style={{ minHeight: '100vh', background: '#08162E', fontFamily: "'Open Sans', sans-serif" }}>
-      <style>{`
-        @keyframes spin  { to { transform: rotate(360deg) } }
-        @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }
-      `}</style>
-
-      <div style={{
-        background: 'rgba(11,22,40,0.95)',
-        borderBottom: '1px solid rgba(15,111,255,0.12)',
-        padding: '0.85rem 1.5rem',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        backdropFilter: 'blur(10px)',
-        position: 'sticky', top: 0, zIndex: 10,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <button
-            onClick={() => navigate('/courses')}
-            style={{
-              background: 'transparent', border: 'none', cursor: 'pointer',
-              color: '#3CCBFF', fontSize: 12, fontWeight: 600,
-              letterSpacing: 0.3, display: 'flex', alignItems: 'center', gap: 5,
-              fontFamily: "'Open Sans', sans-serif",
-            }}
-          >← Back</button>
-          <div style={{ width: 1, height: 16, background: 'rgba(60,203,255,0.2)' }} />
-          <div style={{
-            fontFamily: "'Montserrat', sans-serif", fontWeight: 700,
-            fontSize: 13, color: '#F8FFFF',
-            maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>{course.title}</div>
-        </div>
-
+    <div>
+      {/* Back + title */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.5rem' }}>
+        <button onClick={() => navigate('/courses')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 13, fontFamily: 'var(--font-body)', display: 'flex', alignItems: 'center', gap: 4, padding: 0, transition: 'color 0.15s' }}
+          onMouseEnter={e => { e.currentTarget.style.color = 'var(--white)' }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted)' }}
+        >← Courses</button>
+        <span style={{ color: 'var(--border)', fontSize: 16 }}>|</span>
+        <span style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 15, color: 'var(--white)' }}>{course.title}</span>
         {lessonsReady && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            background: 'rgba(15,111,255,0.08)',
-            border: '1px solid rgba(15,111,255,0.2)',
-            borderRadius: 100, padding: '5px 14px',
-          }}>
-            <div style={{ width: 80, height: 4, background: 'rgba(255,255,255,0.07)', borderRadius: 2, overflow: 'hidden' }}>
-              <div style={{
-                height: '100%', borderRadius: 2,
-                background: pct === 100 ? '#2ECC71' : 'linear-gradient(90deg, #0F6FFF, #3CCBFF)',
-                width: `${pct}%`, transition: 'width 0.5s ease',
-              }} />
-            </div>
-            <span style={{
-              fontSize: 11, fontWeight: 700,
-              color: pct === 100 ? '#2ECC71' : '#3CCBFF',
-            }}>{pct}%</span>
-          </div>
+          <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: pct === 100 ? 'var(--success)' : 'var(--cyan)', fontFamily: 'var(--font-head)' }}>{pct}%</span>
         )}
       </div>
 
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 300px',
-        gap: 0, height: 'calc(100vh - 52px)',
-      }}>
-        <div style={{
-          overflowY: 'auto', padding: '1.5rem 1.75rem',
-          borderRight: '1px solid rgba(15,111,255,0.1)',
-        }}>
-          {!lessonsReady ? (
-            <div style={{
-              position: 'relative', paddingBottom: '56.25%', height: 0,
-              borderRadius: 14, overflow: 'hidden',
-              background: 'rgba(8,22,46,0.8)',
-              border: '1px solid rgba(15,111,255,0.1)',
-              marginBottom: '1.25rem',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <div style={{
-                position: 'absolute', top: '50%', left: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: 36, height: 36,
-                border: '3px solid rgba(15,111,255,0.2)',
-                borderTopColor: '#0F6FFF', borderRadius: '50%',
-                animation: 'spin 0.8s linear infinite',
-              }} />
-            </div>
-          ) : activeLesson ? (
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '1.25rem', alignItems: 'start' }}>
+        {/* Video area */}
+        <div>
+          {activeLesson ? (
             <>
-              <div style={{
-                position: 'relative', paddingBottom: '56.25%', height: 0,
-                borderRadius: 14, overflow: 'hidden',
-                background: '#000',
-                boxShadow: '0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(15,111,255,0.12)',
-                marginBottom: '1.25rem',
-              }}>
+              {/* Video embed */}
+              <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, background: '#000', borderRadius: 'var(--radius)', overflow: 'hidden', marginBottom: '1rem' }}>
                 <iframe
-                  src={`https://www.youtube.com/embed/${activeLesson.youtube_id}?rel=0&modestbranding=1`}
-                  allowFullScreen
-                  title={activeLesson.title}
+                  src={`https://www.youtube.com/embed/${activeLesson.youtube_id}?rel=0`}
+                  allowFullScreen title={activeLesson.title}
                   style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
                 />
               </div>
 
-              <div style={{
-                background: 'rgba(13,31,60,0.7)',
-                border: '1px solid rgba(15,111,255,0.15)',
-                borderRadius: 14, padding: '1.25rem 1.4rem',
-              }}>
-                <div style={{
-                  fontSize: 9.5, fontWeight: 700, letterSpacing: 2,
-                  color: '#6E7B8F', textTransform: 'uppercase', marginBottom: 8,
-                }}>
-                  Class {activeIdx + 1} of {lessons.length}
-                </div>
-
-                <div style={{
-                  fontFamily: "'Montserrat', sans-serif", fontWeight: 700,
-                  fontSize: 18, color: '#F8FFFF', marginBottom: 6, lineHeight: 1.3,
-                }}>
-                  {activeLesson.title}
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: '1.25rem' }}>
-                  <span style={{ fontSize: 12, color: '#6E7B8F', display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <span>⏱</span> {activeLesson.duration}
-                  </span>
-                  {isDone && (
-                    <span style={{ fontSize: 11, color: '#2ECC71', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <span>✓</span> Completed
-                    </span>
-                  )}
-                </div>
-
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  {isDone ? (
-                    <button
-                      onClick={() => unmarkComplete(activeLesson.id)}
-                      style={{
-                        padding: '10px 20px', borderRadius: 9,
-                        background: 'rgba(46,204,113,0.1)',
-                        border: '1px solid rgba(46,204,113,0.3)',
-                        color: '#2ECC71', cursor: 'pointer',
-                        fontSize: 12, fontWeight: 700,
-                        fontFamily: "'Open Sans', sans-serif",
-                        transition: 'all 0.15s', letterSpacing: 0.3,
-                      }}
-                    >✓ Completed — Undo</button>
-                  ) : (
-                    <button
-                      onClick={() => markComplete(activeLesson.id)}
-                      disabled={markingComplete}
-                      style={{
-                        padding: '10px 22px', borderRadius: 9,
-                        background: markingComplete ? 'rgba(13,95,224,0.5)' : 'linear-gradient(135deg, #0F6FFF, #3CCBFF)',
-                        border: 'none', color: '#fff',
-                        cursor: markingComplete ? 'not-allowed' : 'pointer',
-                        fontSize: 12, fontWeight: 700,
-                        fontFamily: "'Montserrat', sans-serif",
-                        letterSpacing: 1, transition: 'all 0.15s',
-                        boxShadow: '0 4px 16px rgba(15,111,255,0.3)',
-                      }}
-                    >
-                      {markingComplete ? 'Saving...' : 'Mark Complete ✓'}
-                    </button>
-                  )}
-
-                  {activeIdx > 0 && (
-                    <button
-                      onClick={() => setActiveLesson(lessons[activeIdx - 1])}
-                      style={{
-                        padding: '10px 18px', borderRadius: 9,
-                        background: 'transparent',
-                        border: '1px solid rgba(15,111,255,0.2)',
-                        color: '#6E7B8F', cursor: 'pointer',
-                        fontSize: 12, fontFamily: "'Open Sans', sans-serif",
-                        transition: 'all 0.15s',
-                      }}
-                    >← Prev</button>
-                  )}
-                  {activeIdx < lessons.length - 1 && (
-                    <button
-                      onClick={() => setActiveLesson(lessons[activeIdx + 1])}
-                      style={{
-                        padding: '10px 18px', borderRadius: 9,
-                        background: 'transparent',
-                        border: '1px solid rgba(15,111,255,0.2)',
-                        color: '#C9D1DC', cursor: 'pointer',
-                        fontSize: 12, fontFamily: "'Open Sans', sans-serif",
-                        transition: 'all 0.15s',
-                      }}
-                    >Next →</button>
-                  )}
-                </div>
+              {/* Lesson info */}
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.25rem 1.4rem' }}>
+                <h2 style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 16, color: 'var(--white)', marginBottom: 4 }}>{activeLesson.title}</h2>
+                {activeLesson.duration && (
+                  <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: '1rem' }}>Duration: {activeLesson.duration}</div>
+                )}
+                {isDone ? (
+                  <button onClick={() => unmark(activeLesson.id)} style={{ padding: '9px 18px', background: 'rgba(46,204,113,0.1)', border: '1px solid rgba(46,204,113,0.3)', borderRadius: 'var(--radius-sm)', color: 'var(--success)', cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-head)' }}>
+                    ✓ Completed — undo
+                  </button>
+                ) : (
+                  <button onClick={() => markComplete(activeLesson.id)} disabled={marking} style={{ padding: '9px 18px', background: 'var(--blue)', border: 'none', borderRadius: 'var(--radius-sm)', color: '#fff', cursor: marking ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-head)', opacity: marking ? 0.6 : 1 }}>
+                    Mark as Complete
+                  </button>
+                )}
               </div>
             </>
           ) : (
-            <div style={{
-              background: 'rgba(15,111,255,0.05)',
-              border: '1px solid rgba(15,111,255,0.15)',
-              borderRadius: 12, padding: '1.5rem',
-              fontSize: 13, color: '#6E7B8F',
-            }}>No lessons in this course yet.</div>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '2rem', textAlign: 'center', fontSize: 14, color: 'var(--muted)' }}>
+              No lessons in this course yet.
+            </div>
           )}
         </div>
 
-        <div style={{ overflowY: 'auto', background: 'rgba(8,18,46,0.6)', padding: '1.25rem 1rem' }}>
-          <div style={{
-            fontSize: 10, fontWeight: 700, letterSpacing: 2,
-            color: '#6E7B8F', textTransform: 'uppercase', marginBottom: '1rem',
-          }}>
-            Course Content
+        {/* Lesson sidebar */}
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', position: 'sticky', top: 76 }}>
+          <div style={{ padding: '1rem 1.1rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: 'var(--muted)', textTransform: 'uppercase' }}>{lessons.length} Lessons</span>
+            {lessonsReady && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--cyan)', fontFamily: 'var(--font-head)' }}>{pct}%</span>}
           </div>
 
-          {!lessonsReady
-            ? [0,1,2,3,4].map(i => <LessonSkeleton key={i} />)
-            : lessons.map((lesson, i) => {
+          {lessonsReady && (
+            <div style={{ height: 3, background: 'rgba(255,255,255,0.07)' }}>
+              <div style={{ height: '100%', background: pct === 100 ? 'var(--success)' : 'var(--blue)', width: `${pct}%`, transition: 'width 0.6s ease' }} />
+            </div>
+          )}
+
+          <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+            {lessons.length === 0 ? (
+              <div style={{ padding: '1rem', fontSize: 12, color: 'var(--muted)' }}>No lessons yet.</div>
+            ) : (
+              lessons.map((lesson, i) => {
                 const isActive = activeLesson?.id === lesson.id
                 const done     = completedIds.includes(lesson.id)
                 return (
@@ -349,48 +156,35 @@ export default function CoursePlayer() {
                     onClick={() => setActiveLesson(lesson)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '10px 12px', borderRadius: 10, marginBottom: 4,
+                      padding: '10px 1.1rem',
+                      borderBottom: '1px solid var(--border)',
                       cursor: 'pointer',
-                      background: isActive ? 'rgba(15,111,255,0.16)' : 'transparent',
-                      border: isActive ? '1px solid rgba(15,111,255,0.3)' : '1px solid transparent',
-                      transition: 'all 0.15s',
+                      background: isActive ? 'var(--blue-dim)' : 'transparent',
+                      transition: 'background 0.1s',
                     }}
-                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(15,111,255,0.07)' }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
                     onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
                   >
                     <div style={{
                       width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                      background: done ? 'var(--blue)' : 'transparent',
+                      border: done ? 'none' : '1.5px solid var(--muted)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: done ? 'linear-gradient(135deg, #0F6FFF, #3CCBFF)' : 'rgba(255,255,255,0.04)',
-                      border: done ? 'none' : isActive ? '1.5px solid #0F6FFF' : '1.5px solid rgba(110,123,143,0.4)',
-                      fontSize: 10, color: done ? '#fff' : 'transparent',
-                      transition: 'all 0.2s',
-                      boxShadow: done ? '0 0 8px rgba(15,111,255,0.4)' : 'none',
-                    }}>
-                      {done ? '✓' : ''}
-                    </div>
-
+                      fontSize: 10, color: done ? '#fff' : 'var(--muted)', fontWeight: 700,
+                    }}>{done ? '✓' : ''}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{
-                        fontSize: 12, lineHeight: 1.4,
-                        color: isActive ? '#F8FFFF' : done ? '#C9D1DC' : '#6E7B8F',
-                        fontWeight: isActive ? 600 : 400,
-                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                      }}>
+                      <div style={{ fontSize: 12.5, color: isActive ? 'var(--white)' : 'var(--silver)', fontWeight: isActive ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {lesson.title}
                       </div>
-                      <div style={{ fontSize: 10, color: '#6E7B8F', marginTop: 2 }}>
-                        Class {i + 1} · {lesson.duration}
-                      </div>
                     </div>
+                    {lesson.duration && (
+                      <div style={{ fontSize: 10.5, color: 'var(--muted)', flexShrink: 0 }}>{lesson.duration}</div>
+                    )}
                   </div>
                 )
               })
-          }
-
-          {lessonsReady && lessons.length === 0 && (
-            <p style={{ fontSize: 12, color: '#6E7B8F' }}>No lessons yet.</p>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
