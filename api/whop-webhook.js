@@ -108,6 +108,8 @@ module.exports = async function handler(req, res) {
     data?.user?.email ||
     data?.customer?.email ||
     data?.membership?.user?.email ||
+    data?.checkout?.email ||
+    data?.order?.email ||
     ''
   ).toLowerCase().trim()
 
@@ -128,7 +130,10 @@ module.exports = async function handler(req, res) {
       'membership.activated',
       'membership.went_valid',
       'membership.renewed',
+      'membership.trial_started',   // free trial begins
+      'membership.trial_extended',
       'membership_activated',
+      'membership_went_valid',
     ].includes(action)
 
     // ── DEACTIVATE ────────────────────────────────────────────────────────────
