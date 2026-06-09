@@ -70,13 +70,22 @@ async function upsertMembership(supabase, userId, email, source = 'manual') {
 
 // ── Main handler ────────────────────────────────────────────────────────────
 module.exports = async function handler(req, res) {
+  // Wrap the ENTIRE handler so every crash returns JSON (not Vercel's HTML 500 page)
+  try {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
   const supabase = getSupabase()
 
-  const admin = await requireAdmin(req, supabase)
+  let admin
+  try {
+    admin = await requireAdmin(req, supabase)
+  } catch (authErr) {
+    console.error('requireAdmin threw:', authErr.message ?? authErr)
+    return res.status(500).json({ error: 'Auth check failed: ' + (authErr.message ?? authErr) })
+  }
+
   if (!admin) {
     return res.status(403).json({ error: 'Forbidden: admin access required' })
   }
@@ -214,7 +223,14 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: `Unknown action: ${action}` })
 
   } catch (err) {
-    console.error('Admin API error:', err.message ?? err)
+    // Inner catch — action-level errors
+    console.error('Admin API action error:', err.message ?? err)
     return res.status(500).json({ error: err.message ?? 'Internal server error' })
+  }
+
+  } catch (outerErr) {
+    // Outer catch — catches anything that slipped past the inner try/catch
+    console.error('Admin API unhandled error:', outerErr.message ?? outerErr)
+    return res.status(500).json({ error: outerErr.message ?? 'Unhandled server error' })
   }
 }
