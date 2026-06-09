@@ -7,9 +7,9 @@ const { createClient } = require('@supabase/supabase-js')
 
 // Disable Vercel's automatic body parsing so we can read the raw body
 // for HMAC signature verification.
-module.exports.config = {
-  api: { bodyParser: false },
-}
+// NOTE: config must be set AFTER module.exports is assigned, otherwise
+// the `module.exports = async function` line below overwrites the object
+// and the config property is lost.  We set it after the handler definition.
 
 // ── Supabase admin client (service role bypasses RLS) ──────────────────────
 function getSupabase() {
@@ -170,21 +170,21 @@ module.exports = async function handler(req, res) {
         if (upsertErr) throw upsertErr
         console.log('Membership activated for existing user:', existingUserId)
       } else {
-        // Brand new user — create auth account + profile + membership
-        const { data: newUserData, error: createErr } = await supabase.auth.admin.createUser({
+        // Brand new user — invite them (sends "Set up your account" email automatically)
+        const fullName = data?.user?.name ?? email.split('@')[0]
+        const { data: invitedData, error: inviteErr } = await supabase.auth.admin.inviteUserByEmail(
           email,
-          email_confirm:  true,
-          user_metadata:  { source: 'whop', full_name: data?.user?.name ?? '' },
-        })
-        if (createErr) throw createErr
+          { data: { full_name: fullName, source: 'whop' } }
+        )
+        if (inviteErr) throw inviteErr
 
-        const userId = newUserData.user.id
+        const userId = invitedData.user.id
 
         await supabase.from('profiles').upsert(
           {
             id:        userId,
             email,
-            full_name: data?.user?.name ?? email.split('@')[0],
+            full_name: fullName,
             role:      'student',
           },
           { onConflict: 'id' }
@@ -200,13 +200,7 @@ module.exports = async function handler(req, res) {
           starts_at:          new Date().toISOString(),
         })
 
-        // Send password setup link so new student can log in
-        await supabase.auth.admin.generateLink({
-          type:  'recovery',
-          email,
-        })
-
-        console.log('New user created and membership activated:', userId)
+        console.log('New user invited via email and membership activated:', userId)
       }
     } else if (isDeactivation) {
       await supabase
@@ -231,4 +225,9 @@ module.exports = async function handler(req, res) {
     console.error('Whop webhook error:', err)
     return res.status(500).json({ error: 'Internal server error' })
   }
+}
+
+// Must be set AFTER module.exports is assigned or it gets overwritten
+module.exports.config = {
+  api: { bodyParser: false },
 }

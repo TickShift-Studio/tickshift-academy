@@ -1,6 +1,19 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../../supabase'
 
+async function adminFetch(action, params = {}) {
+  const { data: { session } } = await supabase.auth.getSession()
+  const token = session?.access_token ?? ''
+  return fetch('/api/admin', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ action, ...params }),
+  })
+}
+
 export default function AdminStudents() {
   const [students, setStudents]   = useState([])
   const [loading, setLoading]     = useState(true)
@@ -34,11 +47,7 @@ export default function AdminStudents() {
     if (!inviteEmail.trim()) return
     setInviting(true); setInviteMsg(null)
     try {
-      const res = await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'invite', email: inviteEmail.trim() }),
-      })
+      const res = await adminFetch('invite-student', { email: inviteEmail.trim() })
       const json = await res.json()
       if (!mountedRef.current) return
       if (res.ok) {
@@ -56,23 +65,23 @@ export default function AdminStudents() {
 
   async function grantAccess(userId) {
     setActionLoading(userId + '_grant')
-    await fetch('/api/admin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'grant', userId }),
-    })
-    if (mountedRef.current) setActionLoading(null)
+    const res = await adminFetch('grant-access', { userId })
+    const json = await res.json().catch(() => ({}))
+    if (mountedRef.current) {
+      setActionLoading(null)
+      if (!res.ok) alert(json.error || 'Failed to grant access.')
+    }
   }
 
   async function revokeAccess(userId) {
     if (!confirm("Revoke this student's membership?")) return
     setActionLoading(userId + '_revoke')
-    await fetch('/api/admin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'revoke', userId }),
-    })
-    if (mountedRef.current) setActionLoading(null)
+    const res = await adminFetch('revoke-access', { userId })
+    const json = await res.json().catch(() => ({}))
+    if (mountedRef.current) {
+      setActionLoading(null)
+      if (!res.ok) alert(json.error || 'Failed to revoke access.')
+    }
   }
 
   const filtered = students.filter(s => {
