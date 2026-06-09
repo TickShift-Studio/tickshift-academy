@@ -158,7 +158,7 @@ export default function AdminAssignments() {
                             </div>
                             <div>
                               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--white)' }}>{sub.profiles?.full_name || sub.profiles?.email || 'Unknown'}</div>
-                              {sub.submitted_at && <div style={{ fontSize: 10, color: 'var(--muted)' }}>{new Date(sub.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>}
+                              {(sub.submitted_at ?? sub.created_at) && <div style={{ fontSize: 10, color: 'var(--muted)' }}>{new Date(sub.submitted_at ?? sub.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>}
                             </div>
                           </div>
                           <div style={{ fontSize: 12, color: 'var(--silver)', lineHeight: 1.7, background: 'rgba(0,0,0,0.2)', borderRadius: 6, padding: '0.7rem 0.9rem' }}>{sub.content}</div>

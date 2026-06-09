@@ -184,17 +184,29 @@ module.exports = async function handler(req, res) {
     }
 
     // ── resend-invite ───────────────────────────────────────────────────────
-    // Resends a password reset email to an existing student.
+    // Resends a password reset / login email to an existing student.
+    // Uses the public /auth/v1/recover endpoint which actually sends the email.
+    // (generateLink only returns a link object — it never emails the user.)
     // params: { email }
     if (action === 'resend-invite') {
       const { email } = params
       if (!email) return res.status(400).json({ error: 'email required' })
 
-      const { error: linkErr } = await supabase.auth.admin.generateLink({
-        type:  'recovery',
-        email: email.toLowerCase().trim(),
+      const recoverRes = await fetch(`${process.env.SUPABASE_URL}/auth/v1/recover`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': process.env.SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          email: email.toLowerCase().trim(),
+          gotrue_meta_security: {},
+        }),
       })
-      if (linkErr) throw linkErr
+      if (!recoverRes.ok) {
+        const body = await recoverRes.json().catch(() => ({}))
+        throw new Error(body.msg || body.error_description || `recover endpoint returned ${recoverRes.status}`)
+      }
 
       return res.status(200).json({ success: true })
     }

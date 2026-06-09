@@ -111,7 +111,7 @@ export default function Homework() {
                 {sub && (
                   <div style={{ marginTop: '1rem', background: 'rgba(46,204,113,0.04)', border: '1px solid rgba(46,204,113,0.15)', borderRadius: 'var(--radius-sm)', padding: '0.9rem 1rem' }}>
                     <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: 'var(--success)', marginBottom: 6, textTransform: 'uppercase' }}>
-                      Your Response — {new Date(sub.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      Your Response — {new Date(sub.submitted_at ?? sub.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </div>
                     <p style={{ fontSize: 13, color: 'var(--silver)', lineHeight: 1.7, margin: 0 }}>{sub.content}</p>
                   </div>

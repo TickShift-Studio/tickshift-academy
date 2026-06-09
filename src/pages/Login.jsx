@@ -21,7 +21,7 @@ export default function Login() {
       if (mode === 'login') {
         const { error: err } = await signIn(email, password)
         if (err) setError(err.message)
-        else navigate('/dashboard')
+        else navigate('/')  // AppRoutes will redirect to /admin or /dashboard based on role
       } else {
         if (!fullName.trim()) { setError('Please enter your full name.'); setLoading(false); return }
         const { error: err } = await signUp(email, password, fullName)

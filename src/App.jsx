@@ -28,10 +28,12 @@ function Spinner() {
 }
 
 function ProtectedLayout({ children, adminOnly = false }) {
-  const { user, profile, loading } = useAuth()
-  if (loading) return <Spinner />
+  const { user, isAdmin, loading, membershipChecked } = useAuth()
+  // Wait for both auth session AND profile/membership to finish loading
+  if (loading || (user && !membershipChecked)) return <Spinner />
   if (!user) return <Navigate to="/login" replace />
-  if (adminOnly && profile !== null && profile?.role !== 'admin') return <Navigate to="/dashboard" replace />
+  // Once fully loaded, redirect non-admins away from admin routes
+  if (adminOnly && !isAdmin) return <Navigate to="/dashboard" replace />
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Navbar />
@@ -43,8 +45,9 @@ function ProtectedLayout({ children, adminOnly = false }) {
 }
 
 function AppRoutes() {
-  const { user, profile, loading } = useAuth()
-  if (loading) return <Spinner />
+  const { user, profile, loading, membershipChecked } = useAuth()
+  // Show spinner until auth AND profile are both resolved
+  if (loading || (user && !membershipChecked)) return <Spinner />
 
   return (
     <Routes>

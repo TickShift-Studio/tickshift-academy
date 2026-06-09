@@ -32,7 +32,7 @@ export default function AdminStudents() {
     async function load() {
       const { data } = await supabase
         .from('profiles')
-        .select('id, full_name, email, is_admin, created_at')
+        .select('id, full_name, email, role, created_at')
         .order('created_at', { ascending: false })
       if (mountedRef.current) {
         setStudents(data || [])
@@ -164,7 +164,7 @@ export default function AdminStudents() {
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--white)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.full_name || '—'}</div>
-                  {s.is_admin && <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.8, background: 'rgba(15,111,255,0.15)', border: '1px solid rgba(15,111,255,0.3)', color: 'var(--blue)', borderRadius: 20, padding: '1px 7px' }}>ADMIN</span>}
+                  {s.role === 'admin' && <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.8, background: 'rgba(15,111,255,0.15)', border: '1px solid rgba(15,111,255,0.3)', color: 'var(--blue)', borderRadius: 20, padding: '1px 7px' }}>ADMIN</span>}
                 </div>
               </div>
               <div style={{ fontSize: 12, color: 'var(--silver)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.email}</div>
