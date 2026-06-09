@@ -65,7 +65,7 @@ export default function AdminStudents() {
   }
 
   async function revokeAccess(userId) {
-    if (!confirm('Revoke this student's membership?')) return
+    if (!confirm("Revoke this student's membership?")) return
     setActionLoading(userId + '_revoke')
     await fetch('/api/admin', {
       method: 'POST',
