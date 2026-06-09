@@ -14,6 +14,9 @@ import AdminDashboard   from './pages/admin/Dashboard'
 import ManageCourses    from './pages/admin/Courses'
 import ManageAssignments from './pages/admin/Assignments'
 import ManageStudents   from './pages/admin/Students'
+import AdminContent     from './pages/admin/Content'
+import Hub              from './pages/hub/Hub'
+import Post             from './pages/hub/Post'
 
 function Spinner() {
   return (
@@ -61,6 +64,10 @@ function AppRoutes() {
       <Route path="/admin/courses"     element={<ProtectedLayout adminOnly><ManageCourses /></ProtectedLayout>} />
       <Route path="/admin/assignments" element={<ProtectedLayout adminOnly><ManageAssignments /></ProtectedLayout>} />
       <Route path="/admin/students"    element={<ProtectedLayout adminOnly><ManageStudents /></ProtectedLayout>} />
+      <Route path="/admin/content"     element={<ProtectedLayout adminOnly><AdminContent /></ProtectedLayout>} />
+
+      <Route path="/hub"      element={<Hub />} />
+      <Route path="/hub/:slug" element={<Post />} />
 
       <Route path="/" element={<Navigate to={user ? (profile?.role === 'admin' ? '/admin' : '/dashboard') : '/login'} replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />

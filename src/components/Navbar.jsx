@@ -11,16 +11,18 @@ export default function Navbar() {
   const menuRef = useRef(null)
 
   const studentLinks = [
-    { to: '/dashboard',  label: 'Dashboard' },
-    { to: '/courses',    label: 'Courses'   },
-    { to: '/homework',   label: 'Assignments' },
-    { to: '/partners',   label: 'Partners'  },
+    { to: '/dashboard',  label: 'Dashboard'    },
+    { to: '/courses',    label: 'Courses'      },
+    { to: '/homework',   label: 'Assignments'  },
+    { to: '/hub',        label: 'Trading Hub'  },
+    { to: '/partners',   label: 'Partners'     },
   ]
   const adminLinks = [
     { to: '/admin',             label: 'Dashboard'   },
     { to: '/admin/courses',     label: 'Courses'     },
     { to: '/admin/assignments', label: 'Assignments' },
     { to: '/admin/students',    label: 'Students'    },
+    { to: '/admin/content',     label: 'Hub Content' },
   ]
   const links = isAdmin ? adminLinks : studentLinks
 
