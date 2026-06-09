@@ -105,17 +105,25 @@ module.exports = async function handler(req, res) {
       let userId
 
       if (existingProfile?.id) {
-        // User exists — just make sure profile is up to date
+        // User exists — update profile and send a password-reset email so they can log in.
+        // generateLink() only returns the link (doesn't email), so we hit Supabase's
+        // public /auth/v1/recover endpoint instead — that triggers the built-in email.
         userId = existingProfile.id
         await supabase.from('profiles').update({
           full_name: fullName ? displayName : undefined,
           role: 'student',
         }).eq('id', userId)
 
-        // Resend password reset so they can log in
-        await supabase.auth.admin.generateLink({
-          type:  'recovery',
-          email: normalEmail,
+        await fetch(`${process.env.SUPABASE_URL}/auth/v1/recover`, {
+          method: 'POST',
+          headers: {
+            'Content-Type':  'application/json',
+            'apikey':        process.env.SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            email: normalEmail,
+            gotrue_meta_security: {},
+          }),
         })
       } else {
         // Brand new user — invite them (sends a clean "Set up your account" email)
