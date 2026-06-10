@@ -1,51 +1,67 @@
 import { useNavigate } from 'react-router-dom'
-import Logo from './Logo'
 
 export default function PublicNav() {
   const navigate = useNavigate()
 
   return (
-    <nav style={{
-      position: 'sticky', top: 0, zIndex: 100,
-      background: 'rgba(8,22,46,0.97)',
-      borderBottom: '1px solid rgba(255,255,255,0.07)',
-      backdropFilter: 'blur(12px)',
-      WebkitBackdropFilter: 'blur(12px)',
-    }}>
+    <nav className="apex-nav">
       <div style={{
-        maxWidth: 1280, margin: '0 auto',
+        maxWidth: 1280,
+        margin: '0 auto',
         padding: '0 1.5rem',
-        height: 60,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        height: 62,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
       }}>
         {/* Logo */}
-        <div
+        <button
           onClick={() => navigate('/hub')}
-          style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0',
+          }}
+          aria-label="Trading Hub home"
         >
-          <Logo size={32} />
-          <div>
-            <div style={{ fontFamily: 'var(--font-head)', fontWeight: 900, fontSize: 14, letterSpacing: 2, color: 'var(--white)', lineHeight: 1 }}>
-              TICKSHIFT
-            </div>
-            <div style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 8, letterSpacing: 3, color: 'var(--cyan)', marginTop: 2 }}>
-              ACADEMY
-            </div>
+          <div style={{
+            width: 30, height: 30, borderRadius: 8,
+            background: 'linear-gradient(135deg, var(--violet), var(--violet-2))',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 14px rgba(139,92,246,0.35)',
+          }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+              <polyline points="17 6 23 6 23 12"/>
+            </svg>
           </div>
-        </div>
+          <div>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 13, letterSpacing: '0.18em', color: 'var(--white)', lineHeight: 1.1 }}>TICKSHIFT</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 8, letterSpacing: '0.3em', color: 'var(--violet-2)', marginTop: 1 }}>ACADEMY</div>
+          </div>
+        </button>
 
-        {/* CTA */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        {/* Right */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
             onClick={() => navigate('/login')}
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 13 }}
-          >Sign in</button>
-          <a
-            href="https://whop.com/tickshift"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ padding: '8px 18px', background: 'var(--blue)', borderRadius: 'var(--radius-sm)', color: '#fff', fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 12, letterSpacing: 0.5, textDecoration: 'none', whiteSpace: 'nowrap' }}
-          >Join Academy →</a>
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 13,
+              color: 'var(--muted)', padding: '6px 10px',
+              transition: 'color 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--white)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted)' }}
+          >
+            Sign in
+          </button>
+          <button
+            onClick={() => navigate('/login')}
+            className="btn-primary"
+            style={{ padding: '8px 18px', fontSize: 13 }}
+          >
+            Join Academy
+          </button>
         </div>
       </div>
     </nav>

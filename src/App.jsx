@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Navbar from './components/Navbar'
+import AnimatedBg from './components/AnimatedBg'
 
 import Login            from './pages/Login'
 import ForgotPassword   from './pages/ForgotPassword'
@@ -20,33 +21,60 @@ import Post             from './pages/hub/Post'
 
 function Spinner() {
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18 }}>
-      <div style={{ fontFamily: 'var(--font-head)', fontWeight: 900, fontSize: 20, letterSpacing: 3, color: 'var(--white)' }}>TICKSHIFT</div>
-      <div style={{ width: 32, height: 32, border: '2.5px solid rgba(15,111,255,0.18)', borderTopColor: 'var(--blue)', borderRadius: '50%', animation: 'spin 0.75s linear infinite' }} />
+    <div style={{
+      minHeight: '100dvh',
+      background: 'var(--bg)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 24,
+    }}>
+      <AnimatedBg />
+      <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+        <div style={{
+          fontFamily: 'var(--font-display)',
+          fontWeight: 800,
+          fontSize: 18,
+          letterSpacing: '0.22em',
+          background: 'linear-gradient(135deg, var(--violet), var(--violet-2))',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+        }}>TICKSHIFT</div>
+        <div style={{
+          width: 36,
+          height: 36,
+          border: '2px solid rgba(139,92,246,0.15)',
+          borderTopColor: 'var(--violet)',
+          borderRadius: '50%',
+          animation: 'spin 0.85s linear infinite',
+        }} />
+      </div>
     </div>
   )
 }
 
 function ProtectedLayout({ children, adminOnly = false }) {
   const { user, isAdmin, loading, membershipChecked } = useAuth()
-  // Wait for both auth session AND profile/membership to finish loading
   if (loading || (user && !membershipChecked)) return <Spinner />
   if (!user) return <Navigate to="/login" replace />
-  // Once fully loaded, redirect non-admins away from admin routes
   if (adminOnly && !isAdmin) return <Navigate to="/dashboard" replace />
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <Navbar />
-      <main style={{ maxWidth: 1280, margin: '0 auto', padding: '2rem 1.5rem' }}>
-        {children}
-      </main>
+    <div style={{ minHeight: '100dvh', background: 'var(--bg)', position: 'relative' }}>
+      <AnimatedBg />
+      <div style={{ position: 'relative', zIndex: 10 }}>
+        <Navbar />
+        <main style={{ maxWidth: 1280, margin: '0 auto', padding: '2.5rem 1.5rem' }}>
+          {children}
+        </main>
+      </div>
     </div>
   )
 }
 
 function AppRoutes() {
   const { user, profile, loading, membershipChecked } = useAuth()
-  // Show spinner until auth AND profile are both resolved
   if (loading || (user && !membershipChecked)) return <Spinner />
 
   return (
@@ -69,7 +97,7 @@ function AppRoutes() {
       <Route path="/admin/students"    element={<ProtectedLayout adminOnly><ManageStudents /></ProtectedLayout>} />
       <Route path="/admin/content"     element={<ProtectedLayout adminOnly><AdminContent /></ProtectedLayout>} />
 
-      <Route path="/hub"      element={<Hub />} />
+      <Route path="/hub"       element={<Hub />} />
       <Route path="/hub/:slug" element={<Post />} />
 
       <Route path="/" element={<Navigate to={user ? (profile?.role === 'admin' ? '/admin' : '/dashboard') : '/login'} replace />} />

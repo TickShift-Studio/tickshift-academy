@@ -57,54 +57,84 @@ export default function AdminAssignments() {
     if (expanded === id) setExpanded(null)
   }
 
-  const inputStyle = { display: 'block', width: '100%', padding: '9px 11px', background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 'var(--radius-sm)', color: 'var(--white)', fontFamily: 'var(--font-body)', fontSize: 13, outline: 'none' }
-  const labelStyle = { display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 5 }
-
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem' }}>
+    <div style={{ animation: 'fadeUp 0.3s ease' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '2.5rem', gap: 16 }}>
         <div>
-          <h1 style={{ fontFamily: 'var(--font-head)', fontWeight: 900, fontSize: 28, color: 'var(--white)', marginBottom: 4 }}>Assignments</h1>
-          <p style={{ fontSize: 13, color: 'var(--muted)' }}>Create and review student work.</p>
+          <h1 style={{
+            fontFamily: 'var(--font-display)', fontWeight: 800,
+            fontSize: 'clamp(24px, 4vw, 36px)', letterSpacing: '-0.02em',
+            background: 'linear-gradient(135deg, var(--white) 0%, rgba(248,248,250,0.65) 100%)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+            marginBottom: 6,
+          }}>Assignments</h1>
+          <p style={{ fontSize: 14, color: 'var(--muted)' }}>Create and review student work.</p>
         </div>
-        <button onClick={() => { setForm({ ...EMPTY }); setErr('') }}
-          style={{ padding: '10px 18px', background: 'var(--blue)', border: 'none', borderRadius: 'var(--radius-sm)', color: '#fff', cursor: 'pointer', fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 12 }}>
-          + New Assignment
+        <button
+          onClick={() => { setForm({ ...EMPTY }); setErr('') }}
+          className="btn-primary"
+          style={{ flexShrink: 0, padding: '10px 18px', fontSize: 13 }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          New Assignment
         </button>
       </div>
 
       {/* Form modal */}
       {form && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.5rem', width: '100%', maxWidth: 480 }}>
-            <h2 style={{ fontFamily: 'var(--font-head)', fontWeight: 800, fontSize: 17, color: 'var(--white)', marginBottom: '1.25rem' }}>{form.id ? 'Edit Assignment' : 'New Assignment'}</h2>
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setForm(null) }}>
+          <div className="modal-card" onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--white)' }}>
+                {form.id ? 'Edit Assignment' : 'New Assignment'}
+              </h2>
+              <button onClick={() => setForm(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', display: 'flex', padding: 4, borderRadius: 6, transition: 'color 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.color = 'var(--white)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted)' }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
             <form onSubmit={save}>
-              <div style={{ marginBottom: '0.9rem' }}>
-                <label style={labelStyle}>Title *</label>
-                <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} style={inputStyle} placeholder="Assignment title" onFocus={e => { e.target.style.borderColor = 'var(--blue)' }} onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }} />
+              <div style={{ marginBottom: '1rem' }}>
+                <label className="field-label">Title *</label>
+                <input className="field-input" value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="Assignment title" />
               </div>
-              <div style={{ marginBottom: '0.9rem' }}>
-                <label style={labelStyle}>Instructions</label>
-                <textarea value={form.description || ''} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={4} style={{ ...inputStyle, resize: 'vertical' }} placeholder="What should students do?" onFocus={e => { e.target.style.borderColor = 'var(--blue)' }} onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }} />
+              <div style={{ marginBottom: '1rem' }}>
+                <label className="field-label">Instructions</label>
+                <textarea className="field-input" value={form.description || ''} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={4} style={{ resize: 'vertical' }} placeholder="What should students do?" />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.9rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
                 <div>
-                  <label style={labelStyle}>Course (optional)</label>
-                  <select value={form.course_id || ''} onChange={e => setForm(p => ({ ...p, course_id: e.target.value }))}
-                    style={{ ...inputStyle }}>
+                  <label className="field-label">Course (optional)</label>
+                  <select className="field-input" value={form.course_id || ''} onChange={e => setForm(p => ({ ...p, course_id: e.target.value }))}>
                     <option value="">— General —</option>
                     {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={labelStyle}>Due Date</label>
-                  <input type="date" value={form.due_date || ''} onChange={e => setForm(p => ({ ...p, due_date: e.target.value }))} style={inputStyle} onFocus={e => { e.target.style.borderColor = 'var(--blue)' }} onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }} />
+                  <label className="field-label">Due Date</label>
+                  <input type="date" className="field-input" value={form.due_date || ''} onChange={e => setForm(p => ({ ...p, due_date: e.target.value }))} />
                 </div>
               </div>
-              {err && <div style={{ padding: '9px 12px', borderRadius: 7, marginBottom: '0.9rem', background: 'rgba(231,76,60,0.08)', border: '1px solid rgba(231,76,60,0.3)', color: 'var(--danger)', fontSize: 13 }}>{err}</div>}
+              {err && (
+                <div style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', marginBottom: '1rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', color: '#F87171', fontSize: 13 }}>{err}</div>
+              )}
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-                <button type="button" onClick={() => setForm(null)} style={{ padding: '9px 16px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 12 }}>Cancel</button>
-                <button type="submit" disabled={saving} style={{ padding: '9px 20px', background: 'var(--blue)', border: 'none', borderRadius: 'var(--radius-sm)', color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 12, opacity: saving ? 0.6 : 1 }}>{saving ? 'Saving…' : 'Save'}</button>
+                <button type="button" onClick={() => setForm(null)} className="btn-ghost">Cancel</button>
+                <button type="submit" disabled={saving} className="btn-primary" style={{ padding: '10px 22px' }}>
+                  {saving ? (
+                    <>
+                      <div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.75s linear infinite' }} />
+                      Saving…
+                    </>
+                  ) : 'Save'}
+                </button>
               </div>
             </form>
           </div>
@@ -113,11 +143,11 @@ export default function AdminAssignments() {
 
       {loading ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
-          <div style={{ width: 28, height: 28, border: '2px solid rgba(15,111,255,0.18)', borderTopColor: 'var(--blue)', borderRadius: '50%', animation: 'spin 0.75s linear infinite' }} />
+          <div style={{ width: 28, height: 28, border: '2px solid rgba(139,92,246,0.15)', borderTopColor: 'var(--violet)', borderRadius: '50%', animation: 'spin 0.75s linear infinite' }} />
         </div>
       ) : assignments.length === 0 ? (
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '2rem', textAlign: 'center', fontSize: 13, color: 'var(--muted)' }}>
-          No assignments yet. Click "+ New Assignment" to create one.
+        <div className="glow-card" style={{ padding: '2.5rem', textAlign: 'center', cursor: 'default' }}>
+          <p style={{ color: 'var(--muted)', fontSize: 14 }}>No assignments yet. Click "New Assignment" to create one.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -126,45 +156,57 @@ export default function AdminAssignments() {
             const open = expanded === a.id
             return (
               <div key={a.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '1rem 1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '1rem 1.25rem', flexWrap: 'wrap' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 14, color: 'var(--white)', marginBottom: 4 }}>{a.title}</div>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {a.courses && <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.8, background: 'var(--blue-dim)', border: '1px solid rgba(15,111,255,0.25)', color: 'var(--cyan)', borderRadius: 20, padding: '2px 9px' }}>{a.courses.title}</span>}
-                      {a.due_date && <span style={{ fontSize: 10, color: 'var(--muted)' }}>Due {a.due_date}</span>}
-                      <span style={{ fontSize: 10, color: 'var(--muted)' }}>{subs.length} submission{subs.length !== 1 ? 's' : ''}</span>
+                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: 'var(--white)', marginBottom: 5 }}>{a.title}</div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                      {a.courses && (
+                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', background: 'var(--violet-dim)', border: '1px solid rgba(139,92,246,0.25)', color: 'var(--violet-2)', borderRadius: 20, padding: '2px 9px', textTransform: 'uppercase' }}>
+                          {a.courses.title}
+                        </span>
+                      )}
+                      {a.due_date && <span style={{ fontSize: 11, color: 'var(--muted)' }}>Due {a.due_date}</span>}
+                      <span style={{ fontSize: 11, color: 'var(--muted)' }}>{subs.length} submission{subs.length !== 1 ? 's' : ''}</span>
                     </div>
                   </div>
-                  <button onClick={() => setExpanded(open ? null : a.id)}
-                    style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--silver)', cursor: 'pointer', padding: '5px 11px', fontSize: 11, fontFamily: 'var(--font-head)', fontWeight: 700 }}>
-                    {open ? 'Hide' : `Submissions (${subs.length})`}
-                  </button>
-                  <button onClick={() => { setForm({ ...a, course_id: a.course_id || '' }); setErr('') }}
-                    style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--silver)', cursor: 'pointer', padding: '5px 11px', fontSize: 11, fontFamily: 'var(--font-head)', fontWeight: 700 }}>Edit</button>
-                  <button onClick={() => del(a.id)}
-                    style={{ background: 'transparent', border: '1px solid rgba(231,76,60,0.3)', borderRadius: 'var(--radius-sm)', color: 'var(--danger)', cursor: 'pointer', padding: '5px 11px', fontSize: 11, fontFamily: 'var(--font-head)', fontWeight: 700 }}>Del</button>
+                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                    <button onClick={() => setExpanded(open ? null : a.id)} className="btn-ghost" style={{ padding: '6px 12px', fontSize: 11 }}>
+                      {open ? 'Hide' : `Submissions (${subs.length})`}
+                    </button>
+                    <button onClick={() => { setForm({ ...a, course_id: a.course_id || '' }); setErr('') }} className="btn-ghost" style={{ padding: '6px 12px', fontSize: 11 }}>Edit</button>
+                    <button onClick={() => del(a.id)} className="btn-danger" style={{ padding: '6px 12px', fontSize: 11 }}>Del</button>
+                  </div>
                 </div>
 
                 {open && (
                   <div style={{ borderTop: '1px solid var(--border)' }}>
                     {subs.length === 0 ? (
-                      <div style={{ padding: '1rem 1.25rem', fontSize: 12, color: 'var(--muted)' }}>No submissions yet.</div>
-                    ) : (
-                      subs.map((sub, i) => (
-                        <div key={sub.id} style={{ padding: '1rem 1.25rem', borderBottom: i < subs.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                            <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--blue-dim)', border: '1px solid rgba(15,111,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'var(--blue)', flexShrink: 0 }}>
-                              {(sub.profiles?.full_name || sub.profiles?.email || '?')[0].toUpperCase()}
-                            </div>
-                            <div>
-                              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--white)' }}>{sub.profiles?.full_name || sub.profiles?.email || 'Unknown'}</div>
-                              {(sub.submitted_at ?? sub.created_at) && <div style={{ fontSize: 10, color: 'var(--muted)' }}>{new Date(sub.submitted_at ?? sub.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>}
-                            </div>
+                      <div style={{ padding: '1rem 1.25rem', fontSize: 13, color: 'var(--muted)' }}>No submissions yet.</div>
+                    ) : subs.map((sub, i) => (
+                      <div key={sub.id} style={{ padding: '1rem 1.25rem', borderBottom: i < subs.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                          <div style={{
+                            width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                            background: 'var(--violet-dim)', border: '1px solid rgba(139,92,246,0.2)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 11, fontWeight: 700, color: 'var(--violet-2)',
+                          }}>
+                            {(sub.profiles?.full_name || sub.profiles?.email || '?')[0].toUpperCase()}
                           </div>
-                          <div style={{ fontSize: 12, color: 'var(--silver)', lineHeight: 1.7, background: 'rgba(0,0,0,0.2)', borderRadius: 6, padding: '0.7rem 0.9rem' }}>{sub.content}</div>
+                          <div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--white)' }}>{sub.profiles?.full_name || sub.profiles?.email || 'Unknown'}</div>
+                            {(sub.submitted_at ?? sub.created_at) && (
+                              <div style={{ fontSize: 10, color: 'var(--muted)' }}>
+                                {new Date(sub.submitted_at ?? sub.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      ))
-                    )}
+                        <div style={{ fontSize: 12.5, color: 'var(--silver)', lineHeight: 1.7, background: 'rgba(0,0,0,0.2)', borderRadius: 8, padding: '0.7rem 0.9rem' }}>
+                          {sub.content}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
