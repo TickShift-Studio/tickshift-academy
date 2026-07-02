@@ -120,7 +120,7 @@ export default function CoursePlayer() {
       </div>
 
       {/* Main layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '1.25rem', alignItems: 'start' }}>
+      <div className="course-layout">
         {/* ── Video + Lesson info ── */}
         <div>
           {activeLesson ? (
@@ -205,7 +205,7 @@ export default function CoursePlayer() {
         </div>
 
         {/* ── Lesson sidebar ── */}
-        <div style={{
+        <div className="course-sidebar" style={{
           background: 'var(--surface)',
           border: '1px solid var(--border)',
           borderRadius: 'var(--radius)',
@@ -236,7 +236,7 @@ export default function CoursePlayer() {
           )}
 
           {/* Lesson list */}
-          <div style={{ maxHeight: 'calc(100vh - 220px)', overflowY: 'auto' }}>
+          <div className="course-sidebar__list" style={{ maxHeight: 'calc(100vh - 220px)', overflowY: 'auto' }}>
             {lessons.length === 0 ? (
               <div style={{ padding: '1.25rem', fontSize: 12, color: 'var(--muted)' }}>No lessons yet.</div>
             ) : lessons.map((lesson, i) => {

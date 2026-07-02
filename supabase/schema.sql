@@ -99,13 +99,35 @@ returns boolean as $$
   );
 $$ language sql security definer;
 
+-- Helpers: the caller's current role/email (security definer, so no
+-- RLS recursion when used inside profiles policies)
+create or replace function my_profile_role()
+returns text
+language sql security definer set search_path = public stable
+as $$
+  select role from profiles where id = auth.uid();
+$$;
+
+create or replace function my_profile_email()
+returns text
+language sql security definer set search_path = public stable
+as $$
+  select email from profiles where id = auth.uid();
+$$;
+
 -- Profiles
 create policy "Users view own profile" on profiles
   for select using (auth.uid() = id);
 create policy "Admins view all profiles" on profiles
   for select using (is_admin());
+-- Users may update their own profile, but never their role or email
 create policy "Users update own profile" on profiles
-  for update using (auth.uid() = id);
+  for update using (auth.uid() = id)
+  with check (
+    auth.uid() = id
+    and role  = my_profile_role()
+    and email = my_profile_email()
+  );
 
 -- Courses (all authenticated users can read; only admins write)
 create policy "Authenticated read courses" on courses
