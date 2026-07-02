@@ -425,6 +425,25 @@ select.field-input option { background: var(--surface-2); }
   letter-spacing: -0.02em;
 }
 
+/* ─── Responsive page layouts ────────────────────────────────── */
+.course-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 1.25rem;
+  align-items: start;
+}
+.hub-featured {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+@media (max-width: 900px) {
+  .course-layout { grid-template-columns: 1fr; }
+  .course-sidebar { position: static !important; }
+  .course-sidebar__list { max-height: 320px !important; }
+  .hub-featured { grid-template-columns: 1fr; }
+  .hub-featured__media { border-radius: var(--radius) var(--radius) 0 0 !important; }
+}
+
 /* ─── Responsive helpers ─────────────────────────────────────── */
 @media (max-width: 768px) {
   .hide-mobile { display: none !important; }

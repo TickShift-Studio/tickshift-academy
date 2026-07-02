@@ -220,17 +220,15 @@ export default function Hub() {
               {featured && (
                 <div
                   onClick={() => navigate(`/hub/${featured.slug}`)}
-                  className="glow-card"
+                  className="glow-card hub-featured"
                   style={{
                     cursor: 'pointer',
                     marginBottom: '2rem',
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
                     minHeight: 280,
                   }}
                 >
                   {/* Image side */}
-                  <div style={{ background: 'var(--surface-2)', overflow: 'hidden', borderRadius: 'var(--radius) 0 0 var(--radius)', position: 'relative', minHeight: 280 }}>
+                  <div className="hub-featured__media" style={{ background: 'var(--surface-2)', overflow: 'hidden', borderRadius: 'var(--radius) 0 0 var(--radius)', position: 'relative', minHeight: 280 }}>
                     {featured.thumbnail_url ? (
                       <img src={featured.thumbnail_url} alt={featured.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" />
                     ) : (

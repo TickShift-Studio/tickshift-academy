@@ -92,7 +92,7 @@ export default async function handler(req, res) {
       // Check if user already exists
       const { data: existingProfile } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, role')
         .eq('email', normalEmail)
         .maybeSingle()
 
@@ -100,8 +100,10 @@ export default async function handler(req, res) {
 
       if (existingProfile?.id) {
         userId = existingProfile.id
-        // Update role and send a password-reset / login email
-        await supabase.from('profiles').update({ role: 'student' }).eq('id', userId)
+        // Backfill a missing role, but never demote an existing admin
+        if (!existingProfile.role) {
+          await supabase.from('profiles').update({ role: 'student' }).eq('id', userId)
+        }
         await fetch(`${process.env.SUPABASE_URL}/auth/v1/recover`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'apikey': process.env.SUPABASE_ANON_KEY },

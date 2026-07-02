@@ -119,7 +119,7 @@ export default function StudentDashboard() {
       </div>
 
       {/* ── Stats row ─────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.75rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.75rem' }}>
         {ready ? (
           <>
             <StatCard
