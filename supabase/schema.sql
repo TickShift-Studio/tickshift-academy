@@ -58,6 +58,18 @@ create table submissions (
   unique(user_id, assignment_id)
 );
 
+create table memberships (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles on delete cascade not null,
+  email text,
+  source text default 'manual',
+  tier text default 'free' check (tier in ('free', 'pro')),
+  status text default 'active' check (status in ('active', 'revoked')),
+  starts_at timestamp with time zone default now(),
+  ends_at timestamp with time zone,
+  created_at timestamp with time zone default now()
+);
+
 -- ============================================================
 -- AUTO-CREATE PROFILE ON SIGNUP
 -- ============================================================
@@ -89,6 +101,7 @@ alter table lessons enable row level security;
 alter table assignments enable row level security;
 alter table lesson_progress enable row level security;
 alter table submissions enable row level security;
+alter table memberships enable row level security;
 
 -- Helper function: is current user an admin?
 create or replace function is_admin()
@@ -115,6 +128,22 @@ as $$
   select email from profiles where id = auth.uid();
 $$;
 
+-- Helper: does the caller have an active membership or admin role?
+create or replace function has_active_access()
+returns boolean
+language sql security definer set search_path = public stable
+as $$
+  select
+    exists (
+      select 1 from memberships
+      where user_id = auth.uid() and status = 'active'
+    )
+    or exists (
+      select 1 from profiles
+      where id = auth.uid() and role = 'admin'
+    );
+$$;
+
 -- Profiles
 create policy "Users view own profile" on profiles
   for select using (auth.uid() = id);
@@ -129,21 +158,21 @@ create policy "Users update own profile" on profiles
     and email = my_profile_email()
   );
 
--- Courses (all authenticated users can read; only admins write)
-create policy "Authenticated read courses" on courses
-  for select to authenticated using (true);
+-- Courses (active members can read; only admins write)
+create policy "Members read courses" on courses
+  for select to authenticated using (has_active_access());
 create policy "Admins manage courses" on courses
   for all using (is_admin());
 
 -- Lessons
-create policy "Authenticated read lessons" on lessons
-  for select to authenticated using (true);
+create policy "Members read lessons" on lessons
+  for select to authenticated using (has_active_access());
 create policy "Admins manage lessons" on lessons
   for all using (is_admin());
 
 -- Assignments
-create policy "Authenticated read assignments" on assignments
-  for select to authenticated using (true);
+create policy "Members read assignments" on assignments
+  for select to authenticated using (has_active_access());
 create policy "Admins manage assignments" on assignments
   for all using (is_admin());
 
@@ -157,6 +186,13 @@ create policy "Admins read all progress" on lesson_progress
 create policy "Users manage own submissions" on submissions
   for all using (user_id = auth.uid());
 create policy "Admins read all submissions" on submissions
+  for select using (is_admin());
+
+-- Memberships (users see their own; admins see all; writes go
+-- through the service-role admin API only)
+create policy "Users view own memberships" on memberships
+  for select using (user_id = auth.uid());
+create policy "Admins read all memberships" on memberships
   for select using (is_admin());
 
 -- ============================================================
